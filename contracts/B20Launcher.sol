@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// Official Base standard library, imported straight from GitHub — Remix fetches
+// Official Base standard library, imported straight from GitHub — Remix/Forge fetch
 // these automatically. This guarantees the B20Factory param encoding is correct
-// (it's versioned/structured, not a plain abi.encode, which is why the manual
-// version reverted).
+// (it's versioned/structured, not a plain abi.encode).
 import {StdPrecompiles} from "https://github.com/base/base-std/blob/main/src/StdPrecompiles.sol";
 import {IB20Factory} from "https://github.com/base/base-std/blob/main/src/interfaces/IB20Factory.sol";
 import {IB20} from "https://github.com/base/base-std/blob/main/src/interfaces/IB20.sol";
@@ -13,6 +12,10 @@ import {B20FactoryLib} from "https://github.com/base/base-std/blob/main/src/lib/
 
 /// @title B20Launcher
 /// @notice Deploy this once, then call launchToken(...) to create your own B20 Asset token.
+///         The caller (msg.sender) becomes the token's DEFAULT_ADMIN_ROLE holder AND is
+///         granted every operational role in the same atomic transaction, so right after
+///         deploy you can mint, burn, pause/unpause, and manage roles with no extra
+///         "please grant yourself permission" transaction.
 contract B20Launcher {
     event TokenLaunched(address indexed token, string name, string symbol, address indexed admin);
 
@@ -43,14 +46,21 @@ contract B20Launcher {
     ) external returns (address token) {
         require(decimals >= 6 && decimals <= 18, "decimals must be 6-18");
 
-        // Correct, official encoding — msg.sender becomes DEFAULT_ADMIN_ROLE holder.
+        // msg.sender becomes DEFAULT_ADMIN_ROLE holder on the token.
         bytes memory params = B20FactoryLib.encodeAssetCreateParams(name, symbol, msg.sender, decimals);
 
-        bytes[] memory initCalls = new bytes[](initialMint > 0 ? 3 : 2);
+        // Bootstrap calls executed atomically at creation (bypass role gates during this window).
+        // Grant the deployer every role they'd otherwise need a follow-up tx for.
+        bytes[] memory initCalls = new bytes[](initialMint > 0 ? 8 : 7);
         initCalls[0] = B20FactoryLib.encodeGrantRole(B20Constants.MINT_ROLE, msg.sender);
-        initCalls[1] = B20FactoryLib.encodeUpdateSupplyCap(initialSupplyCap);
+        initCalls[1] = B20FactoryLib.encodeGrantRole(B20Constants.BURN_ROLE, msg.sender);
+        initCalls[2] = B20FactoryLib.encodeGrantRole(B20Constants.PAUSE_ROLE, msg.sender);
+        initCalls[3] = B20FactoryLib.encodeGrantRole(B20Constants.UNPAUSE_ROLE, msg.sender);
+        initCalls[4] = B20FactoryLib.encodeGrantRole(B20Constants.METADATA_ROLE, msg.sender);
+        initCalls[5] = B20FactoryLib.encodeGrantRole(B20Constants.OPERATOR_ROLE, msg.sender);
+        initCalls[6] = B20FactoryLib.encodeUpdateSupplyCap(initialSupplyCap);
         if (initialMint > 0) {
-            initCalls[2] = abi.encodeWithSelector(IB20.mint.selector, msg.sender, initialMint);
+            initCalls[7] = abi.encodeWithSelector(IB20.mint.selector, msg.sender, initialMint);
         }
 
         token = StdPrecompiles.B20_FACTORY.createB20(

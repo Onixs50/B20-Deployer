@@ -13,6 +13,8 @@ import { CHAIN_META } from "../lib/chains";
 import { addDeployedToken } from "../lib/history";
 import { useLang } from "../lib/i18n";
 import type { DictKey } from "../lib/i18n";
+import { TokenManager } from "./TokenManager";
+import type { Address } from "viem";
 
 const STAGE_KEY: Record<string, DictKey> = {
   idle: "stage_idle",
@@ -151,6 +153,7 @@ export function LaunchForm({ onDeployed }: { onDeployed?: () => void }) {
             <SuccessPanel
               key="success"
               tokenAddress={tokenAddress}
+              chainId={activeChainId}
               txHash={txHash}
               name={name}
               symbol={symbol}
@@ -321,6 +324,7 @@ function Field({
 
 function SuccessPanel({
   tokenAddress,
+  chainId,
   txHash,
   name,
   symbol,
@@ -328,6 +332,7 @@ function SuccessPanel({
   onAgain
 }: {
   tokenAddress: string;
+  chainId: number;
   txHash: string | null;
   name: string;
   symbol: string;
@@ -335,6 +340,7 @@ function SuccessPanel({
   onAgain: () => void;
 }) {
   const { t } = useLang();
+  const [showManager, setShowManager] = useState(false);
   return (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="py-4 text-center">
       <motion.div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-forge-mint/15 animate-stampin">
@@ -366,12 +372,22 @@ function SuccessPanel({
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          onClick={() => setShowManager((v) => !v)}
+          className="inline-block rounded-xl bg-forge-mint/15 px-6 py-3 font-display text-sm font-semibold text-forge-mint transition-transform hover:scale-[1.02]"
+        >
+          {showManager ? t("manage_close") : t("manage_open")}
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={onAgain}
           className="inline-block rounded-xl border border-forge-line px-6 py-3 font-display text-sm font-semibold text-forge-ink transition-colors hover:border-forge-blue"
         >
           {t("success_again")}
         </motion.button>
       </div>
+
+      {showManager && <TokenManager tokenAddress={tokenAddress as Address} chainId={chainId} />}
     </motion.div>
   );
 }

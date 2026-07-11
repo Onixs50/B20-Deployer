@@ -96,7 +96,77 @@ const dict = {
   history_close: { fa: "بستن", en: "Close" },
 
   footer_testnet_first: { fa: "قبل از دیپلوی روی مین‌نت، حتماً روی تست‌نت امتحان کن.", en: "Always try testnet before deploying on mainnet." },
-  footer_built_by: { fa: "ساخته‌شده توسط", en: "Built by" }
+  footer_built_by: { fa: "ساخته‌شده توسط", en: "Built by" },
+
+  manage_open: { fa: "مدیریت توکن", en: "Manage token" },
+  manage_close: { fa: "بستن مدیریت", en: "Close manager" },
+  manage_title: { fa: "پنل مدیریت توکن", en: "Token management panel" },
+  manage_not_admin: {
+    fa: "این کیف‌پول نقش ادمین این توکن رو نداره، پس بعضی از عملیات‌ها ممکنه رد بشه.",
+    en: "This wallet doesn't hold admin roles on this token — some actions may revert."
+  },
+  manage_supply: { fa: "عرضهٔ فعلی", en: "Current supply" },
+  manage_cap: { fa: "سقف عرضه", en: "Supply cap" },
+  manage_cap_none: { fa: "بدون سقف", en: "Uncapped" },
+  manage_balance: { fa: "موجودی تو", en: "Your balance" },
+  manage_status: { fa: "وضعیت", en: "Status" },
+  manage_status_paused: { fa: "متوقف‌شده (Paused)", en: "Paused" },
+  manage_status_active: { fa: "فعال", en: "Active" },
+  manage_refresh: { fa: "به‌روزرسانی", en: "Refresh" },
+
+  tab_mint: { fa: "Mint", en: "Mint" },
+  tab_burn: { fa: "Burn", en: "Burn" },
+  tab_transfer: { fa: "ارسال", en: "Transfer" },
+  tab_batch: { fa: "ارسال گروهی", en: "Batch send" },
+  tab_pause: { fa: "Pause", en: "Pause" },
+  tab_roles: { fa: "نقش‌ها", en: "Roles" },
+
+  mint_to: { fa: "آدرس گیرنده", en: "Recipient address" },
+  mint_amount: { fa: "مقدار", en: "Amount" },
+  mint_to_self: { fa: "برای خودم", en: "To myself" },
+  mint_submit: { fa: "Mint کن", en: "Mint" },
+
+  burn_from: { fa: "سوزوندن از آدرس", en: "Burn from address" },
+  burn_from_self: { fa: "از خودم", en: "From myself" },
+  burn_amount: { fa: "مقدار", en: "Amount" },
+  burn_submit: { fa: "Burn کن", en: "Burn" },
+
+  transfer_to: { fa: "آدرس گیرنده", en: "Recipient address" },
+  transfer_amount: { fa: "مقدار", en: "Amount" },
+  transfer_submit: { fa: "ارسال کن", en: "Send" },
+
+  batch_intro: {
+    fa: "چند ولت واقعی و تصادفی بساز (با کلید خصوصی واقعی، نه آدرس بی‌صاحب) و بهشون توکن بفرست — برای تست پخش/ایردراپ.",
+    en: "Generate several real, freshly-made wallets (with real private keys, not unowned addresses) and send tokens to them — for testing distribution/airdrops."
+  },
+  batch_count: { fa: "تعداد ولت", en: "Number of wallets" },
+  batch_amount_each: { fa: "مقدار برای هرکدوم", en: "Amount per wallet" },
+  batch_generate: { fa: "بساز و آماده کن", en: "Generate wallets" },
+  batch_download: { fa: "دانلود CSV (آدرس + کلید خصوصی)", en: "Download CSV (address + private key)" },
+  batch_warning: {
+    fa: "⚠️ کلیدهای خصوصی رو فقط پیش خودت نگه دار. هرکی این فایل رو ببینه صاحب اون ولت‌ها می‌شه.",
+    en: "⚠️ Keep these private keys to yourself. Anyone who sees this file owns those wallets."
+  },
+  batch_submit: { fa: "ارسال به همه", en: "Send to all" },
+  batch_progress: { fa: "در حال ارسال", en: "Sending" },
+  batch_custom_title: { fa: "یا آدرس‌های دلخواه (هرخط: آدرس,مقدار)", en: "Or custom addresses (one per line: address,amount)" },
+  batch_custom_placeholder: { fa: "0xabc...,100\n0xdef...,50", en: "0xabc...,100\n0xdef...,50" },
+  batch_custom_submit: { fa: "ارسال به لیست بالا", en: "Send to list above" },
+
+  pause_intro: { fa: "توقف موقت همهٔ انتقال‌های توکن (فقط دارندهٔ PAUSE_ROLE).", en: "Temporarily halts all token transfers (PAUSE_ROLE holder only)." },
+  pause_do: { fa: "متوقف کن", en: "Pause" },
+  unpause_do: { fa: "فعال کن", en: "Unpause" },
+
+  roles_intro: { fa: "به یه آدرس دیگه نقش mint/burn/pause بده.", en: "Grant another address a mint/burn/pause role." },
+  roles_account: { fa: "آدرس", en: "Address" },
+  roles_role: { fa: "نقش", en: "Role" },
+  roles_grant: { fa: "اعطا کن", en: "Grant" },
+
+  tx_awaiting: { fa: "منتظر امضا…", en: "Awaiting signature…" },
+  tx_confirming: { fa: "در حال تأیید…", en: "Confirming…" },
+  tx_done: { fa: "انجام شد ✓", en: "Done ✓" },
+  common_invalid_address: { fa: "آدرس معتبر نیست.", en: "Not a valid address." },
+  common_invalid_amount: { fa: "مقدار معتبر نیست.", en: "Not a valid amount." }
 } as const;
 
 export type DictKey = keyof typeof dict;

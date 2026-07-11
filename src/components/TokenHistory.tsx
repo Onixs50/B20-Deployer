@@ -6,7 +6,13 @@ import { getDeployedTokens, type DeployedToken } from "../lib/history";
 import { CHAIN_META } from "../lib/chains";
 import { useLang } from "../lib/i18n";
 
-export function TokenHistory({ refreshKey }: { refreshKey: number }) {
+export function TokenHistory({
+  refreshKey,
+  onManage
+}: {
+  refreshKey: number;
+  onManage?: (token: DeployedToken) => void;
+}) {
   const { address } = useAccount();
   const { t } = useLang();
   const [open, setOpen] = useState(false);
@@ -42,12 +48,15 @@ export function TokenHistory({ refreshKey }: { refreshKey: number }) {
                 {items.map((token) => {
                   const meta = CHAIN_META[token.chainId as keyof typeof CHAIN_META];
                   return (
-                    <li key={token.address + token.timestamp}>
+                    <li
+                      key={token.address + token.timestamp}
+                      className="flex items-center gap-1 rounded-lg border border-forge-line/70 px-2.5 py-2 text-xs transition-colors hover:border-forge-blue"
+                    >
                       <a
                         href={`${meta?.explorer ?? ""}/token/${token.address}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center justify-between rounded-lg border border-forge-line/70 px-2.5 py-2 text-xs transition-colors hover:border-forge-blue"
+                        className="flex flex-1 items-center justify-between"
                       >
                         <span className="flex items-center gap-1.5">
                           <span
@@ -59,6 +68,14 @@ export function TokenHistory({ refreshKey }: { refreshKey: number }) {
                         </span>
                         <span className="text-forge-faint">{meta?.shortLabel}</span>
                       </a>
+                      {onManage && (
+                        <button
+                          onClick={() => onManage(token)}
+                          className="shrink-0 rounded-full bg-forge-mint/15 px-2 py-1 text-[10px] font-semibold text-forge-mint"
+                        >
+                          {t("manage_open")}
+                        </button>
+                      )}
                     </li>
                   );
                 })}
