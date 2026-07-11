@@ -97,10 +97,23 @@ export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address;
         <MintPanel decimals={mgr.info.decimals} me={me} busy={busy} onSubmit={(to, amt) => wrap(() => mgr.mint(to, amt), t("tx_done"))} t={t} />
       )}
       {tab === "burn" && mgr.info && (
-        <BurnPanel decimals={mgr.info.decimals} me={me} busy={busy} onSubmit={(from, amt) => wrap(() => mgr.burn(from, amt), t("tx_done"))} t={t} />
+        <BurnPanel
+          decimals={mgr.info.decimals}
+          balance={mgr.info.myBalance}
+          me={me}
+          busy={busy}
+          onSubmit={(from, amt) => wrap(() => mgr.burn(from, amt), t("tx_done"))}
+          t={t}
+        />
       )}
       {tab === "transfer" && mgr.info && (
-        <TransferPanel decimals={mgr.info.decimals} busy={busy} onSubmit={(to, amt) => wrap(() => mgr.transfer(to, amt), t("tx_done"))} t={t} />
+        <TransferPanel
+          decimals={mgr.info.decimals}
+          balance={mgr.info.myBalance}
+          busy={busy}
+          onSubmit={(to, amt) => wrap(() => mgr.transfer(to, amt), t("tx_done"))}
+          t={t}
+        />
       )}
       {tab === "batch" && mgr.info && (
         <BatchPanel
@@ -189,12 +202,14 @@ function MintPanel({
 
 function BurnPanel({
   decimals,
+  balance,
   me,
   busy,
   onSubmit,
   t
 }: {
   decimals: number;
+  balance: bigint;
   me: Address | undefined;
   busy: boolean;
   onSubmit: (from: Address, amount: bigint) => void;
@@ -204,6 +219,9 @@ function BurnPanel({
   const [amount, setAmount] = useState("");
   const validFrom = isAddress(from);
   const validAmt = isValidQuantityInput(amount, decimals);
+  const isSelf = !!(validFrom && me && from.toLowerCase() === me.toLowerCase());
+  const amountUnits = validAmt ? toBaseUnits(amount, decimals) : 0n;
+  const overBalance = isSelf && validAmt && amountUnits > balance;
 
   return (
     <div className="space-y-3">
@@ -212,9 +230,15 @@ function BurnPanel({
         {t("burn_from_self")}
       </button>
       <AmountField label={t("burn_amount")} value={amount} onChange={setAmount} />
+      {isSelf && (
+        <p className="text-xs text-forge-faint">
+          {t("manage_balance")}: <span className="tabular text-forge-ink">{formatDisplay(fromBaseUnits(balance, decimals))}</span>
+        </p>
+      )}
+      {overBalance && <p className="text-xs text-forge-crimson">{t("burn_over_balance")}</p>}
       <SubmitButton
-        disabled={busy || !validFrom || !validAmt}
-        onClick={() => onSubmit(from as Address, toBaseUnits(amount, decimals))}
+        disabled={busy || !validFrom || !validAmt || overBalance}
+        onClick={() => onSubmit(from as Address, amountUnits)}
         label={t("burn_submit")}
       />
     </div>
@@ -223,11 +247,13 @@ function BurnPanel({
 
 function TransferPanel({
   decimals,
+  balance,
   busy,
   onSubmit,
   t
 }: {
   decimals: number;
+  balance: bigint;
   busy: boolean;
   onSubmit: (to: Address, amount: bigint) => void;
   t: Translator;
@@ -236,14 +262,20 @@ function TransferPanel({
   const [amount, setAmount] = useState("");
   const validTo = isAddress(to);
   const validAmt = isValidQuantityInput(amount, decimals);
+  const amountUnits = validAmt ? toBaseUnits(amount, decimals) : 0n;
+  const overBalance = validAmt && amountUnits > balance;
 
   return (
     <div className="space-y-3">
       <AddressField label={t("transfer_to")} value={to} onChange={setTo} />
       <AmountField label={t("transfer_amount")} value={amount} onChange={setAmount} />
+      <p className="text-xs text-forge-faint">
+        {t("manage_balance")}: <span className="tabular text-forge-ink">{formatDisplay(fromBaseUnits(balance, decimals))}</span>
+      </p>
+      {overBalance && <p className="text-xs text-forge-crimson">{t("burn_over_balance")}</p>}
       <SubmitButton
-        disabled={busy || !validTo || !validAmt}
-        onClick={() => onSubmit(to as Address, toBaseUnits(amount, decimals))}
+        disabled={busy || !validTo || !validAmt || overBalance}
+        onClick={() => onSubmit(to as Address, amountUnits)}
         label={t("transfer_submit")}
       />
     </div>

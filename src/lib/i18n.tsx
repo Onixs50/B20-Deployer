@@ -130,6 +130,7 @@ const dict = {
   burn_from_self: { fa: "از خودم", en: "From myself" },
   burn_amount: { fa: "مقدار", en: "Amount" },
   burn_submit: { fa: "Burn کن", en: "Burn" },
+  burn_over_balance: { fa: "بیشتر از موجودیه — نمی‌شه سوزوند.", en: "More than your balance — can't burn/send that." },
 
   transfer_to: { fa: "آدرس گیرنده", en: "Recipient address" },
   transfer_amount: { fa: "مقدار", en: "Amount" },
