@@ -7,6 +7,7 @@ import { LaunchForm } from "./components/LaunchForm";
 import { TokenHistory } from "./components/TokenHistory";
 import { TokenManager } from "./components/TokenManager";
 import { Footer } from "./components/Footer";
+import { ForgeEmbers } from "./components/ForgeEmbers";
 import type { DeployedToken } from "./lib/history";
 import { useLang } from "./lib/i18n";
 import "./lib/appkit"; // side-effect: initializes Reown AppKit once
@@ -18,15 +19,18 @@ export default function App() {
   const { t } = useLang();
 
   return (
-    <div className="min-h-screen">
-      <Header />
-      <Hero onStart={() => formRef.current?.scrollIntoView({ behavior: "smooth" })} />
-      <HowItWorks />
-      <div ref={formRef} className="px-5 pb-24 pt-10">
-        <LaunchForm onDeployed={() => setHistoryVersion((v) => v + 1)} />
+    <div className="relative min-h-screen">
+      <ForgeEmbers />
+      <div className="relative z-10">
+        <Header />
+        <Hero onStart={() => formRef.current?.scrollIntoView({ behavior: "smooth" })} />
+        <HowItWorks />
+        <div ref={formRef} className="px-5 pb-24 pt-10">
+          <LaunchForm onDeployed={() => setHistoryVersion((v) => v + 1)} />
+        </div>
+        <Footer />
+        <TokenHistory refreshKey={historyVersion} onManage={(token) => setManaging(token)} />
       </div>
-      <Footer />
-      <TokenHistory refreshKey={historyVersion} onManage={(token) => setManaging(token)} />
 
       <AnimatePresence>
         {managing && (

@@ -137,8 +137,23 @@ const dict = {
   transfer_submit: { fa: "ارسال کن", en: "Send" },
 
   batch_intro: {
-    fa: "چند ولت واقعی و تصادفی بساز (با کلید خصوصی واقعی، نه آدرس بی‌صاحب) و بهشون توکن بفرست — برای تست پخش/ایردراپ.",
-    en: "Generate several real, freshly-made wallets (with real private keys, not unowned addresses) and send tokens to them — for testing distribution/airdrops."
+    fa: "همه رو توی یک تراکنش می‌فرسته (نه یکی‌یکی) — یا با mint مستقیم، یا با ترنسفر از موجودی خودت.",
+    en: "Sends everyone in a single transaction (not one-by-one) — either by minting directly, or transferring from your balance."
+  },
+  batch_mode_mint: { fa: "Mint مستقیم به همه", en: "Mint directly to all" },
+  batch_mode_transfer: { fa: "از موجودی من", en: "From my balance" },
+  batch_mint_role_missing: {
+    fa: "کانترکت ارسال گروهی هنوز نقش MINT_ROLE رو نداره — یه‌بار فعالش کن (یک امضا، بعدش دیگه لازم نیست).",
+    en: "The batch contract doesn't hold MINT_ROLE yet — enable it once (one signature, then never again)."
+  },
+  batch_enable_mint_role: { fa: "فعال‌سازی Mint گروهی", en: "Enable batch minting" },
+  batch_transfer_note: {
+    fa: "اگه مجوز کافی نداشته باشی، اول یه تراکنش approve می‌زنه، بعد همه رو یه‌جا می‌فرسته (دو امضا کل، نه به تعداد گیرنده‌ها).",
+    en: "If allowance isn't enough yet, an approve tx runs first, then everyone is sent in one call (two signatures total, not one per recipient)."
+  },
+  batch_not_configured: {
+    fa: "آدرس کانترکت ارسال گروهی (B20BatchDistributor) هنوز توی .env تنظیم نشده.",
+    en: "The batch distributor contract address isn't configured in .env yet."
   },
   batch_count: { fa: "تعداد ولت", en: "Number of wallets" },
   batch_amount_each: { fa: "مقدار برای هرکدوم", en: "Amount per wallet" },

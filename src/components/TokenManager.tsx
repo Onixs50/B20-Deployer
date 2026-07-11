@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { isAddress, type Address } from "viem";
 import { useAccount } from "wagmi";
@@ -93,49 +93,62 @@ export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address;
         ))}
       </div>
 
-      {tab === "mint" && mgr.info && (
-        <MintPanel decimals={mgr.info.decimals} me={me} busy={busy} onSubmit={(to, amt) => wrap(() => mgr.mint(to, amt), t("tx_done"))} t={t} />
-      )}
-      {tab === "burn" && mgr.info && (
-        <BurnPanel
-          decimals={mgr.info.decimals}
-          balance={mgr.info.myBalance}
-          me={me}
-          busy={busy}
-          onSubmit={(from, amt) => wrap(() => mgr.burn(from, amt), t("tx_done"))}
-          t={t}
-        />
-      )}
-      {tab === "transfer" && mgr.info && (
-        <TransferPanel
-          decimals={mgr.info.decimals}
-          balance={mgr.info.myBalance}
-          busy={busy}
-          onSubmit={(to, amt) => wrap(() => mgr.transfer(to, amt), t("tx_done"))}
-          t={t}
-        />
-      )}
-      {tab === "batch" && mgr.info && (
-        <BatchPanel
-          decimals={mgr.info.decimals}
-          symbol={mgr.info.symbol}
-          busy={busy}
-          onSubmitBatch={(recipients) => wrap(() => mgr.transferBatch(recipients), t("tx_done"))}
-          t={t}
-        />
-      )}
-      {tab === "pause" && mgr.info && (
-        <PausePanel
-          paused={!!mgr.info.paused}
-          busy={busy}
-          onPause={() => wrap(() => mgr.setPaused(true), t("tx_done"))}
-          onUnpause={() => wrap(() => mgr.setPaused(false), t("tx_done"))}
-          t={t}
-        />
-      )}
-      {tab === "roles" && (
-        <RolesPanel busy={busy} onGrant={(role, account) => wrap(() => mgr.grantRole(role, account), t("tx_done"))} t={t} />
-      )}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, x: 8 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -8 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        >
+          {tab === "mint" && mgr.info && (
+            <MintPanel decimals={mgr.info.decimals} me={me} busy={busy} onSubmit={(to, amt) => wrap(() => mgr.mint(to, amt), t("tx_done"))} t={t} />
+          )}
+          {tab === "burn" && mgr.info && (
+            <BurnPanel
+              decimals={mgr.info.decimals}
+              balance={mgr.info.myBalance}
+              me={me}
+              busy={busy}
+              onSubmit={(from, amt) => wrap(() => mgr.burn(from, amt), t("tx_done"))}
+              t={t}
+            />
+          )}
+          {tab === "transfer" && mgr.info && (
+            <TransferPanel
+              decimals={mgr.info.decimals}
+              balance={mgr.info.myBalance}
+              busy={busy}
+              onSubmit={(to, amt) => wrap(() => mgr.transfer(to, amt), t("tx_done"))}
+              t={t}
+            />
+          )}
+          {tab === "batch" && mgr.info && (
+            <BatchPanel
+              decimals={mgr.info.decimals}
+              symbol={mgr.info.symbol}
+              busy={busy}
+              distributorConfigured={!!mgr.distributorAddress}
+              onCheckMintRole={mgr.checkDistributorMintRole}
+              onEnableMintRole={() => wrap(() => mgr.grantDistributorMintRole(), t("tx_done"))}
+              onSubmitBatch={(mode, recipients) => wrap(() => mgr.sendBatchOneTx(mode, recipients), t("tx_done"))}
+              t={t}
+            />
+          )}
+          {tab === "pause" && mgr.info && (
+            <PausePanel
+              paused={!!mgr.info.paused}
+              busy={busy}
+              onPause={() => wrap(() => mgr.setPaused(true), t("tx_done"))}
+              onUnpause={() => wrap(() => mgr.setPaused(false), t("tx_done"))}
+              t={t}
+            />
+          )}
+          {tab === "roles" && (
+            <RolesPanel busy={busy} onGrant={(role, account) => wrap(() => mgr.grantRole(role, account), t("tx_done"))} t={t} />
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {mgr.lastTxHash && (
         <a
@@ -286,20 +299,31 @@ function BatchPanel({
   decimals,
   symbol,
   busy,
+  distributorConfigured,
+  onCheckMintRole,
+  onEnableMintRole,
   onSubmitBatch,
   t
 }: {
   decimals: number;
   symbol: string;
   busy: boolean;
-  onSubmitBatch: (recipients: { to: Address; amount: bigint }[]) => void;
+  distributorConfigured: boolean;
+  onCheckMintRole: () => Promise<boolean>;
+  onEnableMintRole: () => void;
+  onSubmitBatch: (mode: "transfer" | "mint", recipients: { to: Address; amount: bigint }[]) => void;
   t: Translator;
 }) {
+  const [mode, setMode] = useState<"mint" | "transfer">("mint");
   const [count, setCount] = useState(5);
   const [amountEach, setAmountEach] = useState("");
   const [wallets, setWallets] = useState<GeneratedWallet[]>([]);
   const [customText, setCustomText] = useState("");
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [hasMintRole, setHasMintRole] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (mode === "mint" && distributorConfigured) onCheckMintRole().then(setHasMintRole);
+  }, [mode, distributorConfigured, onCheckMintRole]);
 
   const customList = useMemo(() => {
     return customText
@@ -314,9 +338,45 @@ function BatchPanel({
 
   const validAmountEach = isValidQuantityInput(amountEach, decimals);
 
+  if (!distributorConfigured) {
+    return <p className="rounded-lg border border-forge-amber/40 bg-forge-amber/10 p-3 text-xs text-forge-amber">{t("batch_not_configured")}</p>;
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-xs text-forge-faint">{t("batch_intro")}</p>
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => {
+            setMode("mint");
+            onCheckMintRole().then(setHasMintRole);
+          }}
+          className={`flex-1 rounded-xl border px-3 py-2 text-xs font-semibold ${mode === "mint" ? "border-forge-blue bg-forge-blue/10 text-forge-blue" : "border-forge-line text-forge-faint"}`}
+        >
+          {t("batch_mode_mint")}
+        </button>
+        <button
+          onClick={() => setMode("transfer")}
+          className={`flex-1 rounded-xl border px-3 py-2 text-xs font-semibold ${mode === "transfer" ? "border-forge-blue bg-forge-blue/10 text-forge-blue" : "border-forge-line text-forge-faint"}`}
+        >
+          {t("batch_mode_transfer")}
+        </button>
+      </div>
+
+      {mode === "mint" && hasMintRole === false && (
+        <div className="rounded-lg border border-forge-amber/40 bg-forge-amber/10 p-3">
+          <p className="mb-2 text-xs text-forge-amber">{t("batch_mint_role_missing")}</p>
+          <button
+            onClick={onEnableMintRole}
+            disabled={busy}
+            className="rounded-lg bg-forge-amber px-3 py-1.5 text-xs font-bold text-black disabled:opacity-40"
+          >
+            {t("batch_enable_mint_role")}
+          </button>
+        </div>
+      )}
+      {mode === "transfer" && <p className="text-[11px] text-forge-faint">{t("batch_transfer_note")}</p>}
 
       <div className="grid grid-cols-2 gap-3">
         <Field label={t("batch_count")}>
@@ -361,21 +421,17 @@ function BatchPanel({
             ))}
           </div>
           <SubmitButton
-            disabled={busy || !validAmountEach}
+            disabled={busy || !validAmountEach || (mode === "mint" && hasMintRole === false)}
             onClick={() => {
               const amt = toBaseUnits(amountEach, decimals);
-              setProgress({ done: 0, total: wallets.length });
-              onSubmitBatch(wallets.map((w) => ({ to: w.address, amount: amt })));
+              onSubmitBatch(
+                mode,
+                wallets.map((w) => ({ to: w.address, amount: amt }))
+              );
             }}
             label={`${t("batch_submit")} (${wallets.length})`}
           />
         </>
-      )}
-
-      {progress && (
-        <p className="text-center text-xs text-forge-faint">
-          {t("batch_progress")}: {progress.done}/{progress.total}
-        </p>
       )}
 
       <div className="border-t border-forge-line pt-4">
@@ -390,9 +446,12 @@ function BatchPanel({
           />
         </Field>
         <SubmitButton
-          disabled={busy || customList.length === 0 || customList.some((c) => !c.validAddr || !c.validAmt)}
+          disabled={busy || customList.length === 0 || customList.some((c) => !c.validAddr || !c.validAmt) || (mode === "mint" && hasMintRole === false)}
           onClick={() =>
-            onSubmitBatch(customList.map((c) => ({ to: c.addr as Address, amount: toBaseUnits(c.amt, decimals) })))
+            onSubmitBatch(
+              mode,
+              customList.map((c) => ({ to: c.addr as Address, amount: toBaseUnits(c.amt, decimals) }))
+            )
           }
           label={t("batch_custom_submit")}
         />

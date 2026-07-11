@@ -17,6 +17,11 @@ export const LAUNCHER_ADDRESSES: Partial<Record<number, Address>> = {
   [baseSepolia.id]: readAddr(import.meta.env.VITE_LAUNCHER_ADDRESS_TESTNET, "VITE_LAUNCHER_ADDRESS_TESTNET")
 };
 
+export const BATCH_DISTRIBUTOR_ADDRESSES: Partial<Record<number, Address>> = {
+  [base.id]: readAddr(import.meta.env.VITE_BATCH_DISTRIBUTOR_ADDRESS_MAINNET, "VITE_BATCH_DISTRIBUTOR_ADDRESS_MAINNET"),
+  [baseSepolia.id]: readAddr(import.meta.env.VITE_BATCH_DISTRIBUTOR_ADDRESS_TESTNET, "VITE_BATCH_DISTRIBUTOR_ADDRESS_TESTNET")
+};
+
 export const PINATA_JWT = import.meta.env.VITE_PINATA_JWT as string | undefined;
 export const PINATA_GATEWAY = (import.meta.env.VITE_PINATA_GATEWAY as string | undefined) ?? "https://gateway.pinata.cloud";
 
