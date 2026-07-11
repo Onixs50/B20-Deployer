@@ -2,12 +2,14 @@ import { useCallback, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { prepareLogo, uploadLogoToIpfs, type IpfsUploadResult } from "../lib/ipfs";
+import { useLang } from "../lib/i18n";
 
 export function LogoUploader({ onUploaded }: { onUploaded: (result: IpfsUploadResult | null) => void }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "processing" | "uploading" | "done" | "error">("idle");
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useLang();
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -19,22 +21,23 @@ export function LogoUploader({ onUploaded }: { onUploaded: (result: IpfsUploadRe
         setStatus("uploading");
         const result = await uploadLogoToIpfs(blob, `${file.name.split(".")[0] || "logo"}.webp`);
         setStatus("done");
-        toast.success("لوگو روی IPFS پین شد");
+        toast.success(t("logo_toast_ok"));
         onUploaded(result);
       } catch (e) {
         setStatus("error");
         toast.error((e as Error).message);
       }
     },
-    [onUploaded]
+    [onUploaded, t]
   );
 
   return (
     <div>
       <p className="mb-2 font-display text-sm font-semibold text-forge-ink">
-        لوگوی توکن <span className="font-normal text-forge-faint">(اختیاری)</span>
+        {t("logo_title")} <span className="font-normal text-forge-faint">{t("logo_optional")}</span>
       </p>
-      <div
+      <motion.div
+        whileHover={{ scale: 1.005 }}
         onDragOver={(e) => {
           e.preventDefault();
           setDragOver(true);
@@ -68,10 +71,17 @@ export function LogoUploader({ onUploaded }: { onUploaded: (result: IpfsUploadRe
               initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="h-full w-full object-contain"
-              alt="پیش‌نمایش لوگو"
+              alt="logo preview"
             />
           ) : (
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" className="text-forge-faint">
+            <motion.svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="text-forge-faint"
+              animate={dragOver ? { y: -3 } : { y: 0 }}
+            >
               <path
                 d="M12 16V4m0 0L7 9m5-5l5 5M5 20h14"
                 stroke="currentColor"
@@ -79,18 +89,18 @@ export function LogoUploader({ onUploaded }: { onUploaded: (result: IpfsUploadRe
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-            </svg>
+            </motion.svg>
           )}
         </div>
         <div className="text-xs text-forge-faint">
-          {status === "idle" && <p>یه عکس بکش اینجا یا کلیک کن — PNG، JPEG یا WebP.</p>}
-          {status === "processing" && <p className="text-forge-blue">در حال تغییر اندازه و فشرده‌سازی…</p>}
-          {status === "uploading" && <p className="text-forge-blue">در حال پین کردن روی IPFS…</p>}
-          {status === "done" && <p className="text-forge-mint">آماده — به توکن وصل می‌شه.</p>}
-          {status === "error" && <p className="text-forge-crimson">مشکلی پیش اومد، دوباره امتحان کن.</p>}
-          <p className="mt-1 opacity-70">خودکار به مربع ۱۰۲۴×۱۰۲۴ و زیر ۱ مگابایت فشرده می‌شه.</p>
+          {status === "idle" && <p>{t("logo_idle")}</p>}
+          {status === "processing" && <p className="text-forge-blue">{t("logo_processing")}</p>}
+          {status === "uploading" && <p className="text-forge-blue">{t("logo_uploading")}</p>}
+          {status === "done" && <p className="text-forge-mint">{t("logo_done")}</p>}
+          {status === "error" && <p className="text-forge-crimson">{t("logo_error")}</p>}
+          <p className="mt-1 opacity-70">{t("logo_note")}</p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

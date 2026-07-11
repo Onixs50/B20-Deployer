@@ -3,6 +3,7 @@ import { useAccount } from "wagmi";
 import { base, baseSepolia } from "viem/chains";
 import { useNetworkGuard, type LaunchNetwork } from "../hooks/useNetworkGuard";
 import { CHAIN_META } from "../lib/chains";
+import { useLang } from "../lib/i18n";
 import toast from "react-hot-toast";
 
 export function NetworkPicker({
@@ -14,6 +15,7 @@ export function NetworkPicker({
 }) {
   const { isConnected, chainId } = useAccount();
   const { onSupportedChain, isSwitching, switchTo } = useNetworkGuard();
+  const { t } = useLang();
 
   async function handlePick(network: LaunchNetwork) {
     onSelect(network);
@@ -22,22 +24,23 @@ export function NetworkPicker({
     if (chainId === target) return;
     try {
       await switchTo(network);
-      toast.success(network === "mainnet" ? "روی Base مین‌نت وصل شدی" : "روی Base تست‌نت وصل شدی");
+      toast.success(network === "mainnet" ? t("network_switch_ok_main") : t("network_switch_ok_test"));
     } catch {
-      toast.error("تعویض شبکه توی کیف‌پول رد شد یا انجام نشد.");
+      toast.error(t("network_switch_fail"));
     }
   }
 
   return (
     <div className="rounded-2xl border border-forge-line bg-forge-panel/60 p-4">
-      <p className="mb-3 font-display text-sm font-semibold text-forge-ink">شبکه دیپلوی</p>
+      <p className="mb-3 font-display text-sm font-semibold text-forge-ink">{t("network_title")}</p>
       <div className="grid grid-cols-2 gap-3">
         {(["testnet", "mainnet"] as LaunchNetwork[]).map((n) => {
           const meta = n === "mainnet" ? CHAIN_META[base.id] : CHAIN_META[baseSepolia.id];
           const active = selected === n;
           return (
-            <button
+            <motion.button
               key={n}
+              whileTap={{ scale: 0.97 }}
               onClick={() => handlePick(n)}
               className={`relative rounded-xl border px-4 py-3 text-right transition-all ${
                 active
@@ -53,7 +56,7 @@ export function NetworkPicker({
                 />
               </div>
               <span className="mt-1 block text-xs text-forge-faint">{meta.label}</span>
-            </button>
+            </motion.button>
           );
         })}
       </div>
@@ -66,14 +69,14 @@ export function NetworkPicker({
             exit={{ opacity: 0, height: 0 }}
             className="mt-3 overflow-hidden rounded-lg border border-forge-amber/40 bg-forge-amber/10 px-3 py-2.5 text-xs text-forge-amber"
           >
-            کیف‌پولت روی شبکه‌ی دیگه‌ایه. برای ادامه باید روی {CHAIN_META[selected === "mainnet" ? base.id : baseSepolia.id].label}{" "}
-            سوییچ کنی —{" "}
+            {t("network_switch_needed")} {CHAIN_META[selected === "mainnet" ? base.id : baseSepolia.id].label}{" "}
+            —{" "}
             <button
               className="underline underline-offset-2"
               onClick={() => handlePick(selected)}
               disabled={isSwitching}
             >
-              {isSwitching ? "در حال تعویض…" : "الان سوییچ کن"}
+              {isSwitching ? t("network_switching") : t("network_switch_cta")}
             </button>
           </motion.div>
         )}

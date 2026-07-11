@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_LAUNCHER_ADDRESS_TESTNET: string;
   readonly VITE_PINATA_JWT: string;
   readonly VITE_PINATA_GATEWAY: string;
+  readonly VITE_CREATOR_TWITTER: string;
+  readonly VITE_CREATOR_GITHUB: string;
 }
 
 interface ImportMeta {

@@ -1,0 +1,42 @@
+export interface DeployedToken {
+  address: string;
+  name: string;
+  symbol: string;
+  chainId: number;
+  txHash: string | null;
+  deployer: string;
+  timestamp: number;
+}
+
+const KEY = "b20forge_history_v1";
+
+function readAll(): DeployedToken[] {
+  try {
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAll(items: DeployedToken[]) {
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(items));
+  } catch {
+    // storage unavailable (private mode, quota, etc.) — silently skip
+  }
+}
+
+export function addDeployedToken(entry: DeployedToken) {
+  const items = readAll();
+  items.unshift(entry);
+  writeAll(items.slice(0, 100));
+}
+
+export function getDeployedTokens(deployer?: string): DeployedToken[] {
+  const items = readAll();
+  if (!deployer) return items;
+  return items.filter((i) => i.deployer.toLowerCase() === deployer.toLowerCase());
+}

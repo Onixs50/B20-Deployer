@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { useAccount } from "wagmi";
@@ -10,70 +10,112 @@ import { useLaunchToken } from "../hooks/useLaunchToken";
 import { isValidQuantityInput, toBaseUnits, formatDisplay } from "../lib/amounts";
 import { uploadMetadataToIpfs, type IpfsUploadResult } from "../lib/ipfs";
 import { CHAIN_META } from "../lib/chains";
+import { addDeployedToken } from "../lib/history";
+import { useLang } from "../lib/i18n";
+import type { DictKey } from "../lib/i18n";
 
-const STAGE_LABEL: Record<string, string> = {
-  idle: "",
-  "checking-feature": "بررسی فعال بودن B20 روی شبکه…",
-  "deriving-salt": "ساخت یه شناسه یکتا برای توکن…",
-  "awaiting-signature": "منتظر امضای تراکنش توی کیف‌پول…",
-  confirming: "در حال تأیید روی زنجیره…",
-  done: "دیپلوی موفق!",
-  error: "مشکلی پیش اومد"
+const STAGE_KEY: Record<string, DictKey> = {
+  idle: "stage_idle",
+  "checking-feature": "stage_checking",
+  "deriving-salt": "stage_salt",
+  "awaiting-signature": "stage_sign",
+  confirming: "stage_confirm",
+  done: "stage_done",
+  error: "stage_error"
 };
 
-export function LaunchForm() {
-  const { isConnected } = useAccount();
-  const [network, setNetwork] = useState<LaunchNetwork>("testnet");
-  const { onSupportedChain, chainId } = useNetworkGuard();
+const emptyForm = {
+  name: "",
+  symbol: "",
+  decimals: 18,
+  supplyCap: "",
+  noCap: true,
+  initialMint: ""
+};
 
-  const [name, setName] = useState("");
-  const [symbol, setSymbol] = useState("");
-  const [decimals, setDecimals] = useState(18);
-  const [supplyCap, setSupplyCap] = useState("");
-  const [noCap, setNoCap] = useState(true);
-  const [initialMint, setInitialMint] = useState("");
+export function LaunchForm({ onDeployed }: { onDeployed?: () => void }) {
+  const { isConnected, address } = useAccount();
+  const { t } = useLang();
+  const [network, setNetwork] = useState<LaunchNetwork>("testnet");
+  const { onSupportedChain } = useNetworkGuard();
+
+  const [form, setForm] = useState(emptyForm);
+  const { name, symbol, decimals, supplyCap, noCap, initialMint } = form;
   const [logo, setLogo] = useState<IpfsUploadResult | null>(null);
 
   const activeChainId = network === "mainnet" ? base.id : baseSepolia.id;
-  const { launch, stage, error, tokenAddress, txHash, launcherAddress } = useLaunchToken(activeChainId);
+  const { launch, reset, stage, error, tokenAddress, txHash, launcherAddress } = useLaunchToken(activeChainId);
+
+  // Log every successful deploy into the local per-browser history exactly once.
+  useEffect(() => {
+    if (stage === "done" && tokenAddress && address) {
+      addDeployedToken({
+        address: tokenAddress,
+        name: name.trim(),
+        symbol: symbol.trim().toUpperCase(),
+        chainId: activeChainId,
+        txHash,
+        deployer: address,
+        timestamp: Date.now()
+      });
+      onDeployed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, tokenAddress]);
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (name.trim().length < 1 || name.trim().length > 40) e.name = "بین ۱ تا ۴۰ کاراکتر.";
-    if (!/^[A-Za-z0-9]{2,11}$/.test(symbol.trim())) e.symbol = "۲ تا ۱۱ حرف/عدد انگلیسی، بدون فاصله.";
-    if (decimals < 6 || decimals > 18) e.decimals = "بین ۶ تا ۱۸.";
-    if (!noCap && !isValidQuantityInput(supplyCap, decimals)) e.supplyCap = "یک عدد معتبر بنویس.";
-    if (initialMint.trim() !== "" && !isValidQuantityInput(initialMint, decimals)) e.initialMint = "یک عدد معتبر بنویس.";
-    if (!noCap && initialMint.trim() !== "" && isValidQuantityInput(supplyCap, decimals) && isValidQuantityInput(initialMint, decimals)) {
+    if (name.trim().length < 1 || name.trim().length > 40) e.name = t("field_name_err");
+    if (!/^[A-Za-z0-9]{2,11}$/.test(symbol.trim())) e.symbol = t("field_symbol_err");
+    if (decimals < 6 || decimals > 18) e.decimals = t("field_decimals_err");
+    if (!noCap && !isValidQuantityInput(supplyCap, decimals)) e.supplyCap = t("field_cap_err");
+    if (initialMint.trim() !== "" && !isValidQuantityInput(initialMint, decimals)) e.initialMint = t("field_mint_err");
+    if (
+      !noCap &&
+      initialMint.trim() !== "" &&
+      isValidQuantityInput(supplyCap, decimals) &&
+      isValidQuantityInput(initialMint, decimals)
+    ) {
       if (toBaseUnits(initialMint, decimals) > toBaseUnits(supplyCap, decimals)) {
-        e.initialMint = "نمی‌تونه از سقف عرضه بیشتر باشه.";
+        e.initialMint = t("field_mint_over_cap");
       }
     }
     return e;
-  }, [name, symbol, decimals, supplyCap, noCap, initialMint]);
+  }, [name, symbol, decimals, supplyCap, noCap, initialMint, t]);
 
   const formValid = Object.keys(errors).length === 0 && name && symbol;
-  const canSubmit = formValid && isConnected && onSupportedChain && stage !== "confirming" && stage !== "awaiting-signature";
+  const canSubmit =
+    formValid && isConnected && onSupportedChain && stage !== "confirming" && stage !== "awaiting-signature";
+
+  function set<K extends keyof typeof emptyForm>(key: K, value: (typeof emptyForm)[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  /** Clears the form and hook state so the user can deploy again without a page refresh. */
+  function startFresh() {
+    setForm(emptyForm);
+    setLogo(null);
+    reset();
+  }
 
   async function handleSubmit() {
     if (!isConnected) {
-      toast.error("اول کیف‌پولت رو وصل کن.");
+      toast.error(t("toast_need_wallet"));
       return;
     }
     if (!onSupportedChain) {
-      toast.error("اول باید روی Base مین‌نت یا تست‌نت سوییچ کنی.");
+      toast.error(t("toast_need_network"));
       return;
     }
     if (!launcherAddress) {
-      toast.error("آدرس قرارداد لانچر برای این شبکه تنظیم نشده.");
+      toast.error(t("toast_no_launcher"));
       return;
     }
 
-    const supplyCapUnits = noCap ? (2n ** 128n - 1n) : toBaseUnits(supplyCap, decimals);
+    const supplyCapUnits = noCap ? 2n ** 128n - 1n : toBaseUnits(supplyCap, decimals);
     const initialMintUnits = initialMint.trim() === "" ? 0n : toBaseUnits(initialMint, decimals);
 
     try {
-      // Pin metadata (name/symbol/logo) alongside the token — best-effort, never blocks deploy.
       if (logo) {
         uploadMetadataToIpfs({
           name: name.trim(),
@@ -83,17 +125,16 @@ export function LaunchForm() {
         }).catch(() => {});
       }
 
-      const result = await launch({
+      await launch({
         name: name.trim(),
         symbol: symbol.trim().toUpperCase(),
         decimals,
         supplyCapBaseUnits: supplyCapUnits,
         initialMintBaseUnits: initialMintUnits
       });
-      toast.success("تراکنش تأیید شد!");
-      void result;
+      toast.success(t("toast_tx_ok"));
     } catch {
-      // error surfaced via `error` state below
+      // surfaced via `error` state below
     }
   }
 
@@ -101,18 +142,35 @@ export function LaunchForm() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="rounded-3xl border border-forge-line bg-forge-panel/70 p-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-sm md:p-8">
+      <motion.div
+        layout
+        className="rounded-3xl border border-forge-line bg-forge-panel/70 p-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-sm md:p-8"
+      >
         <AnimatePresence mode="wait">
           {stage === "done" && tokenAddress ? (
-            <SuccessPanel tokenAddress={tokenAddress} txHash={txHash} name={name} symbol={symbol} meta={meta} />
+            <SuccessPanel
+              key="success"
+              tokenAddress={tokenAddress}
+              txHash={txHash}
+              name={name}
+              symbol={symbol}
+              meta={meta}
+              onAgain={startFresh}
+            />
           ) : (
-            <motion.div key="form" initial={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+            <motion.div
+              key="form"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
               <NetworkPicker selected={network} onSelect={setNetwork} />
 
-              <Field label="اسم توکن" error={errors.name} hint="مثلا «My Onixia Token»">
+              <Field label={t("field_name")} error={errors.name} hint={t("field_name_hint")}>
                 <input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => set("name", e.target.value)}
                   maxLength={40}
                   placeholder="My Onixia Token"
                   className="input"
@@ -120,23 +178,23 @@ export function LaunchForm() {
               </Field>
 
               <div className="grid grid-cols-2 gap-4">
-                <Field label="نماد" error={errors.symbol} hint="مثلا ONX">
+                <Field label={t("field_symbol")} error={errors.symbol} hint={t("field_symbol_hint")}>
                   <input
                     value={symbol}
-                    onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                    onChange={(e) => set("symbol", e.target.value.toUpperCase())}
                     maxLength={11}
                     placeholder="ONX"
                     className="input tabular"
                     dir="ltr"
                   />
                 </Field>
-                <Field label="اعشار (Decimals)" error={errors.decimals} hint="۶ تا ۱۸، پیش‌فرض ۱۸">
+                <Field label={t("field_decimals")} error={errors.decimals} hint={t("field_decimals_hint")}>
                   <input
                     type="number"
                     min={6}
                     max={18}
                     value={decimals}
-                    onChange={(e) => setDecimals(Math.max(6, Math.min(18, Number(e.target.value) || 18)))}
+                    onChange={(e) => set("decimals", Math.max(6, Math.min(18, Number(e.target.value) || 18)))}
                     className="input tabular"
                     dir="ltr"
                   />
@@ -144,40 +202,37 @@ export function LaunchForm() {
               </div>
 
               <Field
-                label="سقف عرضه کل (Supply Cap)"
+                label={t("field_cap")}
                 error={errors.supplyCap}
-                hint={noCap ? "بدون سقف — هر مقدار قابل mint هست" : "دقیقاً همین تعداد واحد کامل توکن"}
+                hint={noCap ? t("field_cap_hint_uncapped") : t("field_cap_hint_capped")}
                 action={
                   <label className="flex cursor-pointer items-center gap-1.5 text-xs text-forge-faint">
-                    <input type="checkbox" checked={noCap} onChange={(e) => setNoCap(e.target.checked)} />
-                    بدون سقف
+                    <input type="checkbox" checked={noCap} onChange={(e) => set("noCap", e.target.checked)} />
+                    {t("field_cap_uncapped_toggle")}
                   </label>
                 }
               >
                 <input
                   value={noCap ? "" : supplyCap}
-                  onChange={(e) => setSupplyCap(e.target.value.replace(/[^\d.]/g, ""))}
+                  onChange={(e) => set("supplyCap", e.target.value.replace(/[^\d.]/g, ""))}
                   disabled={noCap}
-                  placeholder={noCap ? "نامحدود" : "1000000"}
+                  placeholder={noCap ? "∞" : "1000000"}
                   className="input tabular disabled:opacity-40"
                   dir="ltr"
                   inputMode="decimal"
                 />
                 {supplyCap && !noCap && isValidQuantityInput(supplyCap, decimals) && (
                   <p className="mt-1 text-xs text-forge-faint">
-                    یعنی دقیقاً <span className="text-forge-ink">{formatDisplay(supplyCap)}</span> توکن کامل.
+                    {t("field_cap_result")} <span className="text-forge-ink">{formatDisplay(supplyCap)}</span>{" "}
+                    {t("field_cap_result_suffix")}
                   </p>
                 )}
               </Field>
 
-              <Field
-                label="مقدار Mint اولیه"
-                error={errors.initialMint}
-                hint="به کیف‌پول خودت — می‌تونی صفر بذاری"
-              >
+              <Field label={t("field_mint")} error={errors.initialMint} hint={t("field_mint_hint")}>
                 <input
                   value={initialMint}
-                  onChange={(e) => setInitialMint(e.target.value.replace(/[^\d.]/g, ""))}
+                  onChange={(e) => set("initialMint", e.target.value.replace(/[^\d.]/g, ""))}
                   placeholder="1000"
                   className="input tabular"
                   dir="ltr"
@@ -185,37 +240,38 @@ export function LaunchForm() {
                 />
                 {initialMint && isValidQuantityInput(initialMint, decimals) && (
                   <p className="mt-1 text-xs text-forge-faint">
-                    یعنی دقیقاً <span className="text-forge-ink">{formatDisplay(initialMint)}</span> توکن کامل به آدرس تو mint می‌شه.
+                    {t("field_mint_result")} <span className="text-forge-ink">{formatDisplay(initialMint)}</span>{" "}
+                    {t("field_mint_result_suffix")}
                   </p>
                 )}
               </Field>
 
               <LogoUploader onUploaded={setLogo} />
 
-              <button
+              <motion.button
+                whileTap={canSubmit ? { scale: 0.985 } : undefined}
                 onClick={handleSubmit}
                 disabled={!canSubmit && stage !== "error"}
-                className="relative w-full overflow-hidden rounded-xl bg-forge-blue py-4 font-display text-sm font-bold text-white transition-transform enabled:hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+                className="relative w-full overflow-hidden rounded-xl bg-forge-blue py-4 font-display text-sm font-bold text-white transition-transform enabled:hover:scale-[1.005] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {stage === "idle" || stage === "error" || stage === "done"
-                  ? `دیپلوی روی ${meta.shortLabel}`
-                  : STAGE_LABEL[stage]}
-                {(stage === "awaiting-signature" || stage === "confirming" || stage === "checking-feature" || stage === "deriving-salt") && (
+                  ? `${t("submit_deploy_on")} ${meta.shortLabel}`
+                  : t(STAGE_KEY[stage])}
+                {(stage === "awaiting-signature" ||
+                  stage === "confirming" ||
+                  stage === "checking-feature" ||
+                  stage === "deriving-salt") && (
                   <motion.span
                     className="absolute inset-0 bg-white/10"
                     animate={{ x: ["-100%", "100%"] }}
                     transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
                   />
                 )}
-              </button>
+              </motion.button>
 
-              {!isConnected && (
-                <p className="text-center text-xs text-forge-faint">برای دیپلوی، اول کیف‌پولت رو وصل کن.</p>
-              )}
+              {!isConnected && <p className="text-center text-xs text-forge-faint">{t("submit_need_wallet")}</p>}
               {isConnected && !onSupportedChain && (
-                <p className="text-center text-xs text-forge-amber">
-                  فقط روی Base مین‌نت یا تست‌نت می‌تونی دیپلوی کنی — بالا انتخاب کن.
-                </p>
+                <p className="text-center text-xs text-forge-amber">{t("submit_need_network")}</p>
               )}
               {stage === "error" && error && (
                 <motion.p
@@ -229,7 +285,7 @@ export function LaunchForm() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -268,46 +324,54 @@ function SuccessPanel({
   txHash,
   name,
   symbol,
-  meta
+  meta,
+  onAgain
 }: {
   tokenAddress: string;
   txHash: string | null;
   name: string;
   symbol: string;
   meta: (typeof CHAIN_META)[keyof typeof CHAIN_META];
+  onAgain: () => void;
 }) {
+  const { t } = useLang();
   return (
-    <motion.div
-      key="success"
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="py-4 text-center"
-    >
-      <motion.div
-        className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-forge-mint/15 animate-stampin"
-      >
+    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="py-4 text-center">
+      <motion.div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-forge-mint/15 animate-stampin">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
           <path d="M5 13l4 4L19 7" stroke="#00E6A0" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </motion.div>
       <h3 className="font-display text-xl font-bold">
-        {name} (<span className="tabular">{symbol}</span>) دیپلوی شد!
+        {name} (<span className="tabular">{symbol}</span>) {t("stage_done")}
       </h3>
-      <p className="mt-1 text-sm text-forge-faint">روی {meta.label}</p>
+      <p className="mt-1 text-sm text-forge-faint">
+        {t("success_on")} {meta.label}
+      </p>
 
       <div className="mx-auto mt-6 max-w-md space-y-2 rounded-xl border border-forge-line bg-forge-bg/60 p-4 text-right">
-        <Row label="آدرس توکن" value={tokenAddress} href={`${meta.explorer}/token/${tokenAddress}`} />
-        {txHash && <Row label="تراکنش" value={txHash} href={`${meta.explorer}/tx/${txHash}`} />}
+        <Row label={t("success_token_addr")} value={tokenAddress} href={`${meta.explorer}/token/${tokenAddress}`} />
+        {txHash && <Row label={t("success_tx")} value={txHash} href={`${meta.explorer}/tx/${txHash}`} />}
       </div>
 
-      <a
-        href={`${meta.explorer}/token/${tokenAddress}`}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-6 inline-block rounded-xl bg-forge-blue px-6 py-3 font-display text-sm font-semibold text-white"
-      >
-        دیدن توکن روی {meta.explorer.includes("sepolia") ? "Basescan (تست‌نت)" : "Basescan"}
-      </a>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <a
+          href={`${meta.explorer}/token/${tokenAddress}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block rounded-xl bg-forge-blue px-6 py-3 font-display text-sm font-semibold text-white transition-transform hover:scale-[1.02]"
+        >
+          {t("success_view")} Basescan
+        </a>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onAgain}
+          className="inline-block rounded-xl border border-forge-line px-6 py-3 font-display text-sm font-semibold text-forge-ink transition-colors hover:border-forge-blue"
+        >
+          {t("success_again")}
+        </motion.button>
+      </div>
     </motion.div>
   );
 }

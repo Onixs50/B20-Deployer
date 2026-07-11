@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
+import { useLang } from "../lib/i18n";
 
 export function Header() {
+  const { lang, toggle, t } = useLang();
+
   return (
     <header className="sticky top-0 z-40 border-b border-forge-line/70 bg-forge-bg/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
@@ -24,10 +27,20 @@ export function Header() {
             />
           </motion.svg>
           <span className="font-display text-lg font-bold tracking-tight">
-            B20 <span className="text-forge-blue">Forge</span>
+            B20 <span className="text-forge-blue">{t("brand")}</span>
           </span>
         </div>
-        <appkit-button balance="hide" />
+
+        <div className="flex items-center gap-3">
+          <motion.button
+            onClick={toggle}
+            whileTap={{ scale: 0.94 }}
+            className="rounded-full border border-forge-line px-3 py-1.5 font-mono text-xs font-medium text-forge-faint transition-colors hover:border-forge-blue hover:text-forge-ink"
+          >
+            {lang === "fa" ? "EN" : "فا"}
+          </motion.button>
+          <appkit-button balance="hide" />
+        </div>
       </div>
     </header>
   );

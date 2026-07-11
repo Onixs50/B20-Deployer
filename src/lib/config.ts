@@ -20,6 +20,10 @@ export const LAUNCHER_ADDRESSES: Partial<Record<number, Address>> = {
 export const PINATA_JWT = import.meta.env.VITE_PINATA_JWT as string | undefined;
 export const PINATA_GATEWAY = (import.meta.env.VITE_PINATA_GATEWAY as string | undefined) ?? "https://gateway.pinata.cloud";
 
+export const CREATOR_NAME = "Onixia";
+export const CREATOR_TWITTER = import.meta.env.VITE_CREATOR_TWITTER as string | undefined;
+export const CREATOR_GITHUB = import.meta.env.VITE_CREATOR_GITHUB as string | undefined;
+
 // Hard IPFS-friendly image limits — many pinning/gateway services choke above these.
 export const IMAGE_MAX_BYTES = 1_000_000; // 1 MB after compression
 export const IMAGE_MAX_DIMENSION = 1024; // px, square recommended (logo use)
