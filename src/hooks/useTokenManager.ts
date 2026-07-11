@@ -155,19 +155,20 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
     [runWrite, requireReady]
   );
 
+  /** Burns from your OWN balance — the real B20 token only exposes burn(uint256),
+   *  which always burns from msg.sender (there's no "burn someone else's tokens"
+   *  overload on the standard token itself). */
   const burn = useCallback(
-    (from: Address, amount: bigint) =>
+    (amount: bigint) =>
       runWrite(async () => {
         const { walletClient, me, tokenAddress } = requireReady();
-        await assertSufficientBalance(from, amount);
-        // Prefer the 2-arg role-gated burn(account, amount); if the token only
-        // implements self burn(amount), the caller should pass their own address.
+        await assertSufficientBalance(me, amount);
         return walletClient.writeContract({
           account: me,
           address: tokenAddress,
           abi: B20_TOKEN_ABI,
           functionName: "burn",
-          args: [from, amount]
+          args: [amount]
         });
       }),
     [runWrite, requireReady, assertSufficientBalance]
@@ -189,46 +190,17 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
     [runWrite, requireReady, assertSufficientBalance]
   );
 
-  /** Sends everyone in ONE transaction via the B20BatchDistributor contract.
-   *  mode "transfer": moves tokens out of your balance (auto-approves the
-   *  distributor first if the current allowance is too low — that's a second,
-   *  one-time signature, not one per recipient).
-   *  mode "mint": mints straight to each recipient — the distributor must
-   *  already hold MINT_ROLE on the token (grant it once from the Roles tab). */
+  /** Sends everyone in ONE transaction.
+   *  mode "mint": calls the token's own native batchMint(recipients, amounts) —
+   *  no separate contract needed, works with the MINT_ROLE you already have.
+   *  mode "transfer": moves tokens out of your balance via the B20BatchDistributor
+   *  contract (auto-approves it first if the current allowance is too low —
+   *  that's a second, one-time signature, not one per recipient). */
   const distributorAddress = chainId ? BATCH_DISTRIBUTOR_ADDRESSES[chainId] : undefined;
-
-  const checkDistributorMintRole = useCallback(async () => {
-    if (!publicClient || !tokenAddress || !distributorAddress) return false;
-    return (await publicClient
-      .readContract({
-        address: tokenAddress,
-        abi: B20_TOKEN_ABI,
-        functionName: "hasRole",
-        args: [roleHash("MINT_ROLE"), distributorAddress]
-      })
-      .catch(() => false)) as boolean;
-  }, [publicClient, tokenAddress, distributorAddress]);
-
-  const grantDistributorMintRole = useCallback(
-    () =>
-      runWrite(async () => {
-        const { walletClient, me, tokenAddress } = requireReady();
-        if (!distributorAddress) throw new Error("آدرس کانترکت ارسال گروهی توی .env تنظیم نشده.");
-        return walletClient.writeContract({
-          account: me,
-          address: tokenAddress,
-          abi: B20_TOKEN_ABI,
-          functionName: "grantRole",
-          args: [roleHash("MINT_ROLE"), distributorAddress]
-        });
-      }),
-    [runWrite, requireReady, distributorAddress]
-  );
 
   const sendBatchOneTx = useCallback(
     async (mode: "transfer" | "mint", recipients: { to: Address; amount: bigint }[]) => {
       const { walletClient, me, tokenAddress } = requireReady();
-      if (!distributorAddress) throw new Error("آدرس کانترکت ارسال گروهی (B20BatchDistributor) توی .env تنظیم نشده.");
       if (!publicClient) throw new Error("اتصال به شبکه برقرار نیست.");
 
       const tos = recipients.map((r) => r.to);
@@ -238,7 +210,19 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
       setTxError(null);
       setTxState("awaiting-signature");
       try {
-        if (mode === "transfer") {
+        if (mode === "mint") {
+          const hash = await walletClient.writeContract({
+            account: me,
+            address: tokenAddress,
+            abi: B20_TOKEN_ABI,
+            functionName: "batchMint",
+            args: [tos, amounts]
+          });
+          setLastTxHash(hash);
+          setTxState("confirming");
+          await publicClient.waitForTransactionReceipt({ hash });
+        } else {
+          if (!distributorAddress) throw new Error("آدرس کانترکت ارسال گروهی (B20BatchDistributor) توی .env تنظیم نشده.");
           await assertSufficientBalance(me, total);
           const currentAllowance = (await publicClient.readContract({
             address: tokenAddress,
@@ -271,23 +255,6 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
           setLastTxHash(hash);
           setTxState("confirming");
           await publicClient.waitForTransactionReceipt({ hash });
-        } else {
-          const hasMintRole = await checkDistributorMintRole();
-          if (!hasMintRole) {
-            throw new Error(
-              "کانترکت ارسال گروهی هنوز نقش MINT_ROLE رو نداره. اول از تب «نقش‌ها» یه‌بار بهش اعطا کن (یا دکمهٔ فعال‌سازی توی همین تب رو بزن)."
-            );
-          }
-          const hash = await walletClient.writeContract({
-            account: me,
-            address: distributorAddress,
-            abi: B20_BATCH_DISTRIBUTOR_ABI,
-            functionName: "batchMint",
-            args: [tokenAddress, tos, amounts]
-          });
-          setLastTxHash(hash);
-          setTxState("confirming");
-          await publicClient.waitForTransactionReceipt({ hash });
         }
         setTxState("done");
         await refresh();
@@ -297,7 +264,7 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
         throw e;
       }
     },
-    [requireReady, distributorAddress, publicClient, assertSufficientBalance, checkDistributorMintRole, refresh]
+    [requireReady, distributorAddress, publicClient, assertSufficientBalance, refresh]
   );
 
   const setPaused = useCallback(
@@ -345,8 +312,6 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
     transfer,
     sendBatchOneTx,
     distributorAddress,
-    checkDistributorMintRole,
-    grantDistributorMintRole,
     setPaused,
     grantRole,
     txState,

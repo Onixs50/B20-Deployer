@@ -128,6 +128,10 @@ const dict = {
 
   burn_from: { fa: "سوزوندن از آدرس", en: "Burn from address" },
   burn_from_self: { fa: "از خودم", en: "From myself" },
+  burn_self_note: {
+    fa: "خود این توکن فقط اجازهٔ سوزوندن از موجودی خودت رو می‌ده (نه از آدرس دیگه).",
+    en: "This token only supports burning from your own balance (not someone else's)."
+  },
   burn_amount: { fa: "مقدار", en: "Amount" },
   burn_submit: { fa: "Burn کن", en: "Burn" },
   burn_over_balance: { fa: "بیشتر از موجودیه — نمی‌شه سوزوند.", en: "More than your balance — can't burn/send that." },

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { isAddress, type Address } from "viem";
@@ -108,9 +108,8 @@ export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address;
             <BurnPanel
               decimals={mgr.info.decimals}
               balance={mgr.info.myBalance}
-              me={me}
               busy={busy}
-              onSubmit={(from, amt) => wrap(() => mgr.burn(from, amt), t("tx_done"))}
+              onSubmit={(amt) => wrap(() => mgr.burn(amt), t("tx_done"))}
               t={t}
             />
           )}
@@ -128,9 +127,7 @@ export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address;
               decimals={mgr.info.decimals}
               symbol={mgr.info.symbol}
               busy={busy}
-              distributorConfigured={!!mgr.distributorAddress}
-              onCheckMintRole={mgr.checkDistributorMintRole}
-              onEnableMintRole={() => wrap(() => mgr.grantDistributorMintRole(), t("tx_done"))}
+              transferModeConfigured={!!mgr.distributorAddress}
               onSubmitBatch={(mode, recipients) => wrap(() => mgr.sendBatchOneTx(mode, recipients), t("tx_done"))}
               t={t}
             />
@@ -216,44 +213,30 @@ function MintPanel({
 function BurnPanel({
   decimals,
   balance,
-  me,
   busy,
   onSubmit,
   t
 }: {
   decimals: number;
   balance: bigint;
-  me: Address | undefined;
   busy: boolean;
-  onSubmit: (from: Address, amount: bigint) => void;
+  onSubmit: (amount: bigint) => void;
   t: Translator;
 }) {
-  const [from, setFrom] = useState("");
   const [amount, setAmount] = useState("");
-  const validFrom = isAddress(from);
   const validAmt = isValidQuantityInput(amount, decimals);
-  const isSelf = !!(validFrom && me && from.toLowerCase() === me.toLowerCase());
   const amountUnits = validAmt ? toBaseUnits(amount, decimals) : 0n;
-  const overBalance = isSelf && validAmt && amountUnits > balance;
+  const overBalance = validAmt && amountUnits > balance;
 
   return (
     <div className="space-y-3">
-      <AddressField label={t("burn_from")} value={from} onChange={setFrom} />
-      <button className="text-xs text-forge-blue" onClick={() => me && setFrom(me)}>
-        {t("burn_from_self")}
-      </button>
+      <p className="text-xs text-forge-faint">{t("burn_self_note")}</p>
       <AmountField label={t("burn_amount")} value={amount} onChange={setAmount} />
-      {isSelf && (
-        <p className="text-xs text-forge-faint">
-          {t("manage_balance")}: <span className="tabular text-forge-ink">{formatDisplay(fromBaseUnits(balance, decimals))}</span>
-        </p>
-      )}
+      <p className="text-xs text-forge-faint">
+        {t("manage_balance")}: <span className="tabular text-forge-ink">{formatDisplay(fromBaseUnits(balance, decimals))}</span>
+      </p>
       {overBalance && <p className="text-xs text-forge-crimson">{t("burn_over_balance")}</p>}
-      <SubmitButton
-        disabled={busy || !validFrom || !validAmt || overBalance}
-        onClick={() => onSubmit(from as Address, amountUnits)}
-        label={t("burn_submit")}
-      />
+      <SubmitButton disabled={busy || !validAmt || overBalance} onClick={() => onSubmit(amountUnits)} label={t("burn_submit")} />
     </div>
   );
 }
@@ -299,18 +282,14 @@ function BatchPanel({
   decimals,
   symbol,
   busy,
-  distributorConfigured,
-  onCheckMintRole,
-  onEnableMintRole,
+  transferModeConfigured,
   onSubmitBatch,
   t
 }: {
   decimals: number;
   symbol: string;
   busy: boolean;
-  distributorConfigured: boolean;
-  onCheckMintRole: () => Promise<boolean>;
-  onEnableMintRole: () => void;
+  transferModeConfigured: boolean;
   onSubmitBatch: (mode: "transfer" | "mint", recipients: { to: Address; amount: bigint }[]) => void;
   t: Translator;
 }) {
@@ -319,11 +298,6 @@ function BatchPanel({
   const [amountEach, setAmountEach] = useState("");
   const [wallets, setWallets] = useState<GeneratedWallet[]>([]);
   const [customText, setCustomText] = useState("");
-  const [hasMintRole, setHasMintRole] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (mode === "mint" && distributorConfigured) onCheckMintRole().then(setHasMintRole);
-  }, [mode, distributorConfigured, onCheckMintRole]);
 
   const customList = useMemo(() => {
     return customText
@@ -337,10 +311,7 @@ function BatchPanel({
   }, [customText, decimals]);
 
   const validAmountEach = isValidQuantityInput(amountEach, decimals);
-
-  if (!distributorConfigured) {
-    return <p className="rounded-lg border border-forge-amber/40 bg-forge-amber/10 p-3 text-xs text-forge-amber">{t("batch_not_configured")}</p>;
-  }
+  const modeBlocked = mode === "transfer" && !transferModeConfigured;
 
   return (
     <div className="space-y-4">
@@ -348,10 +319,7 @@ function BatchPanel({
 
       <div className="flex gap-2">
         <button
-          onClick={() => {
-            setMode("mint");
-            onCheckMintRole().then(setHasMintRole);
-          }}
+          onClick={() => setMode("mint")}
           className={`flex-1 rounded-xl border px-3 py-2 text-xs font-semibold ${mode === "mint" ? "border-forge-blue bg-forge-blue/10 text-forge-blue" : "border-forge-line text-forge-faint"}`}
         >
           {t("batch_mode_mint")}
@@ -364,19 +332,10 @@ function BatchPanel({
         </button>
       </div>
 
-      {mode === "mint" && hasMintRole === false && (
-        <div className="rounded-lg border border-forge-amber/40 bg-forge-amber/10 p-3">
-          <p className="mb-2 text-xs text-forge-amber">{t("batch_mint_role_missing")}</p>
-          <button
-            onClick={onEnableMintRole}
-            disabled={busy}
-            className="rounded-lg bg-forge-amber px-3 py-1.5 text-xs font-bold text-black disabled:opacity-40"
-          >
-            {t("batch_enable_mint_role")}
-          </button>
-        </div>
+      {mode === "transfer" && !transferModeConfigured && (
+        <p className="rounded-lg border border-forge-amber/40 bg-forge-amber/10 p-3 text-xs text-forge-amber">{t("batch_not_configured")}</p>
       )}
-      {mode === "transfer" && <p className="text-[11px] text-forge-faint">{t("batch_transfer_note")}</p>}
+      {mode === "transfer" && transferModeConfigured && <p className="text-[11px] text-forge-faint">{t("batch_transfer_note")}</p>}
 
       <div className="grid grid-cols-2 gap-3">
         <Field label={t("batch_count")}>
@@ -421,7 +380,7 @@ function BatchPanel({
             ))}
           </div>
           <SubmitButton
-            disabled={busy || !validAmountEach || (mode === "mint" && hasMintRole === false)}
+            disabled={busy || !validAmountEach || modeBlocked}
             onClick={() => {
               const amt = toBaseUnits(amountEach, decimals);
               onSubmitBatch(
@@ -446,7 +405,7 @@ function BatchPanel({
           />
         </Field>
         <SubmitButton
-          disabled={busy || customList.length === 0 || customList.some((c) => !c.validAddr || !c.validAmt) || (mode === "mint" && hasMintRole === false)}
+          disabled={busy || customList.length === 0 || customList.some((c) => !c.validAddr || !c.validAmt) || modeBlocked}
           onClick={() =>
             onSubmitBatch(
               mode,
