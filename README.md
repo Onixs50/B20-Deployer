@@ -66,9 +66,6 @@ cp .env.example .env
 npm run dev
 ```
 
-Before it fully works you'll need to deploy two small contracts and fill in
-a handful of `.env` values (wallet-connect project ID, contract addresses,
-etc.) — the complete walkthrough is in **[SETUP.md](./SETUP.md)**.
 
 ## License
 
