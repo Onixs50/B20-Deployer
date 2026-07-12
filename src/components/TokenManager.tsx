@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { isAddress, type Address } from "viem";
+import { base } from "viem/chains";
 import { useAccount } from "wagmi";
 import { useTokenManager } from "../hooks/useTokenManager";
 import { isValidQuantityInput, toBaseUnits, fromBaseUnits, formatDisplay } from "../lib/amounts";
@@ -9,25 +10,37 @@ import { generateRandomWallets, walletsToCsv, downloadCsv, type GeneratedWallet 
 import { useLang } from "../lib/i18n";
 import { CHAIN_META } from "../lib/chains";
 
-type Tab = "mint" | "burn" | "transfer" | "batch" | "pause" | "roles";
+type Tab = "mint" | "burn" | "transfer" | "batch" | "pause";
 
 export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address; chainId: number }) {
   const { t } = useLang();
   const { address: me } = useAccount();
   const meta = CHAIN_META[chainId as keyof typeof CHAIN_META];
   const mgr = useTokenManager(tokenAddress, chainId);
-  const [tab, setTab] = useState<Tab>("mint");
+  const isMainnet = chainId === base.id;
+
+  // Group mint/send and single mint/send are mainnet-limited for now (see
+  // manage_mainnet_limited below) — only Burn is offered there. Testnet keeps
+  // the full set. The "Roles" tab is gone everywhere; manual role-granting
+  // isn't exposed through the site at all anymore.
+  const tabs: { id: Tab; label: string }[] = isMainnet
+    ? [{ id: "burn", label: t("tab_burn") }]
+    : [
+        { id: "mint", label: t("tab_mint") },
+        { id: "burn", label: t("tab_burn") },
+        { id: "transfer", label: t("tab_transfer") },
+        { id: "batch", label: t("tab_batch") },
+        { id: "pause", label: t("tab_pause") }
+      ];
+
+  const [tab, setTab] = useState<Tab>(isMainnet ? "burn" : "mint");
+
+  useEffect(() => {
+    if (!tabs.some((tb) => tb.id === tab)) setTab(isMainnet ? "burn" : "mint");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMainnet]);
 
   const busy = mgr.txState === "awaiting-signature" || mgr.txState === "confirming";
-
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "mint", label: t("tab_mint") },
-    { id: "burn", label: t("tab_burn") },
-    { id: "transfer", label: t("tab_transfer") },
-    { id: "batch", label: t("tab_batch") },
-    { id: "pause", label: t("tab_pause") },
-    { id: "roles", label: t("tab_roles") }
-  ];
 
   async function wrap(action: () => Promise<unknown>, okMsg: string) {
     try {
@@ -57,6 +70,12 @@ export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address;
       {mgr.info && !mgr.info.isAdmin && (
         <p className="mb-4 rounded-lg border border-forge-amber/40 bg-forge-amber/10 p-3 text-xs text-forge-amber">
           {t("manage_not_admin")}
+        </p>
+      )}
+
+      {isMainnet && (
+        <p className="mb-4 rounded-lg border border-forge-amber/40 bg-forge-amber/10 p-3 text-xs text-forge-amber">
+          {t("manage_mainnet_limited")}
         </p>
       )}
 
@@ -140,9 +159,6 @@ export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address;
               onUnpause={() => wrap(() => mgr.setPaused(false), t("tx_done"))}
               t={t}
             />
-          )}
-          {tab === "roles" && (
-            <RolesPanel busy={busy} onGrant={(role, account) => wrap(() => mgr.grantRole(role, account), t("tx_done"))} t={t} />
           )}
         </motion.div>
       </AnimatePresence>
@@ -441,36 +457,6 @@ function PausePanel({
       ) : (
         <SubmitButton disabled={busy} onClick={onPause} label={t("pause_do")} danger />
       )}
-    </div>
-  );
-}
-
-function RolesPanel({
-  busy,
-  onGrant,
-  t
-}: {
-  busy: boolean;
-  onGrant: (role: "MINT_ROLE" | "BURN_ROLE" | "PAUSE_ROLE" | "UNPAUSE_ROLE", account: Address) => void;
-  t: Translator;
-}) {
-  const [account, setAccount] = useState("");
-  const [role, setRole] = useState<"MINT_ROLE" | "BURN_ROLE" | "PAUSE_ROLE" | "UNPAUSE_ROLE">("MINT_ROLE");
-  const validAccount = isAddress(account);
-
-  return (
-    <div className="space-y-3">
-      <p className="text-xs text-forge-faint">{t("roles_intro")}</p>
-      <AddressField label={t("roles_account")} value={account} onChange={setAccount} />
-      <Field label={t("roles_role")}>
-        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="input" dir="ltr">
-          <option value="MINT_ROLE">MINT_ROLE</option>
-          <option value="BURN_ROLE">BURN_ROLE</option>
-          <option value="PAUSE_ROLE">PAUSE_ROLE</option>
-          <option value="UNPAUSE_ROLE">UNPAUSE_ROLE</option>
-        </select>
-      </Field>
-      <SubmitButton disabled={busy || !validAccount} onClick={() => onGrant(role, account as Address)} label={t("roles_grant")} />
     </div>
   );
 }

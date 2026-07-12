@@ -282,21 +282,6 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
     [runWrite, requireReady]
   );
 
-  const grantRole = useCallback(
-    (roleName: Parameters<typeof roleHash>[0], account: Address) =>
-      runWrite(async () => {
-        const { walletClient, me, tokenAddress } = requireReady();
-        return walletClient.writeContract({
-          account: me,
-          address: tokenAddress,
-          abi: B20_TOKEN_ABI,
-          functionName: "grantRole",
-          args: [roleHash(roleName), account]
-        });
-      }),
-    [runWrite, requireReady]
-  );
-
   const resetTxState = useCallback(() => {
     setTxState("idle");
     setTxError(null);
@@ -313,7 +298,6 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
     sendBatchOneTx,
     distributorAddress,
     setPaused,
-    grantRole,
     txState,
     txError,
     lastTxHash,

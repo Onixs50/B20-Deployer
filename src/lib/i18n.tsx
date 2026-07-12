@@ -119,7 +119,6 @@ const dict = {
   tab_transfer: { fa: "ارسال", en: "Transfer" },
   tab_batch: { fa: "ارسال گروهی", en: "Batch send" },
   tab_pause: { fa: "Pause", en: "Pause" },
-  tab_roles: { fa: "نقش‌ها", en: "Roles" },
 
   mint_to: { fa: "آدرس گیرنده", en: "Recipient address" },
   mint_amount: { fa: "مقدار", en: "Amount" },
@@ -177,10 +176,10 @@ const dict = {
   pause_do: { fa: "متوقف کن", en: "Pause" },
   unpause_do: { fa: "فعال کن", en: "Unpause" },
 
-  roles_intro: { fa: "به یه آدرس دیگه نقش mint/burn/pause بده.", en: "Grant another address a mint/burn/pause role." },
-  roles_account: { fa: "آدرس", en: "Address" },
-  roles_role: { fa: "نقش", en: "Role" },
-  roles_grant: { fa: "اعطا کن", en: "Grant" },
+  manage_mainnet_limited: {
+    fa: "روی مین‌نت فعلاً فقط Burn در دسترسه. Mint و ارسال (چه تکی چه گروهی) موقتاً غیرفعاله چون این عملیات‌ها روی مین‌نت پایدار عمل نمی‌کردن — روی تست‌نت همه‌چیز فعاله.",
+    en: "Only Burn is available on mainnet for now. Mint and Send (single or batch) are temporarily disabled here because those operations weren't behaving reliably on mainnet — everything is still enabled on testnet."
+  },
 
   tx_awaiting: { fa: "منتظر امضا…", en: "Awaiting signature…" },
   tx_confirming: { fa: "در حال تأیید…", en: "Confirming…" },
