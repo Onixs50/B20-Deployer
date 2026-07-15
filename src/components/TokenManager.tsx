@@ -19,12 +19,13 @@ export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address;
   const mgr = useTokenManager(tokenAddress, chainId);
   const isMainnet = chainId === base.id;
 
-  // Group mint/send and single mint/send are mainnet-limited for now (see
-  // manage_mainnet_limited below) — only Burn is offered there. Testnet keeps
-  // the full set. The "Roles" tab is gone everywhere; manual role-granting
-  // isn't exposed through the site at all anymore.
+  // Mint is now enabled on mainnet alongside Burn. Transfer/batch/pause
+  // remain testnet-only for now.
   const tabs: { id: Tab; label: string }[] = isMainnet
-    ? [{ id: "burn", label: t("tab_burn") }]
+    ? [
+        { id: "mint", label: t("tab_mint") },
+        { id: "burn", label: t("tab_burn") }
+      ]
     : [
         { id: "mint", label: t("tab_mint") },
         { id: "burn", label: t("tab_burn") },
@@ -33,10 +34,10 @@ export function TokenManager({ tokenAddress, chainId }: { tokenAddress: Address;
         { id: "pause", label: t("tab_pause") }
       ];
 
-  const [tab, setTab] = useState<Tab>(isMainnet ? "burn" : "mint");
+  const [tab, setTab] = useState<Tab>("mint");
 
   useEffect(() => {
-    if (!tabs.some((tb) => tb.id === tab)) setTab(isMainnet ? "burn" : "mint");
+    if (!tabs.some((tb) => tb.id === tab)) setTab("mint");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMainnet]);
 

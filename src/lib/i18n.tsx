@@ -177,8 +177,8 @@ const dict = {
   unpause_do: { fa: "فعال کن", en: "Unpause" },
 
   manage_mainnet_limited: {
-    fa: "روی مین‌نت فعلاً فقط Burn در دسترسه. Mint و ارسال (چه تکی چه گروهی) موقتاً غیرفعاله چون این عملیات‌ها روی مین‌نت پایدار عمل نمی‌کردن — روی تست‌نت همه‌چیز فعاله.",
-    en: "Only Burn is available on mainnet for now. Mint and Send (single or batch) are temporarily disabled here because those operations weren't behaving reliably on mainnet — everything is still enabled on testnet."
+    fa: "روی مین‌نت فقط Mint و Burn در دسترسن. ارسال (تکی یا گروهی) و Pause فعلاً موقتاً غیرفعاله چون این عملیات‌ها روی مین‌نت پایدار عمل نمی‌کردن — روی تست‌نت همه‌چیز فعاله.",
+    en: "Only Mint and Burn are available on mainnet for now. Send (single or batch) and Pause are temporarily disabled here because those operations weren't behaving reliably on mainnet — everything is still enabled on testnet."
   },
 
   tx_awaiting: { fa: "منتظر امضا…", en: "Awaiting signature…" },
