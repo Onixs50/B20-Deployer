@@ -122,6 +122,38 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
     return { walletClient, me, tokenAddress };
   }, [walletClient, me, tokenAddress]);
 
+  /** B20 tokens are chain-native precompiles (Beryl upgrade) — the token address
+   *  holds no bytecode. A lot of wallets/injected providers estimate gas for a
+   *  call by first checking eth_getCode; when that comes back empty they treat
+   *  the call like a plain EOA transfer and hand it a bare ~21-25k gas budget
+   *  instead of properly simulating the precompile. That under-estimate is what
+   *  produces the "out of gas" failures on mint/burn/transfer/pause — it is NOT
+   *  a missing-role problem (the launcher grants MINT_ROLE etc. to the deployer
+   *  atomically at creation, see B20Launcher.sol).
+   *
+   *  Workaround: ask the RPC node directly for a real simulated estimate via
+   *  publicClient.estimateContractGas (bypasses the wallet's shortcut), add a
+   *  healthy buffer, and pass that as an explicit `gas` value on the write —
+   *  wallets use an explicit gas value as-is instead of re-estimating it. */
+  const estimateGasWithBuffer = useCallback(
+    async (request: Parameters<NonNullable<typeof publicClient>["estimateContractGas"]>[0]) => {
+      if (!publicClient) return undefined;
+      try {
+        const est = await publicClient.estimateContractGas(request);
+        // +60% buffer, floored at 120k — generous on purpose since the whole
+        // point is that the "accurate" estimate for this address type has
+        // been unreliable in the wild since B20 launched.
+        const buffered = (est * 160n) / 100n;
+        return buffered > 120000n ? buffered : 120000n;
+      } catch {
+        // If simulation itself fails (e.g. a genuine revert), fall back to
+        // undefined and let the normal write path surface the real error.
+        return undefined;
+      }
+    },
+    [publicClient]
+  );
+
   /** Re-reads the live on-chain balance right before sending — avoids acting on
    *  a stale number shown in the UI if the person fired off several actions quickly. */
   const assertSufficientBalance = useCallback(
@@ -144,15 +176,17 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
     (to: Address, amount: bigint) =>
       runWrite(async () => {
         const { walletClient, me, tokenAddress } = requireReady();
-        return walletClient.writeContract({
+        const request = {
           account: me,
           address: tokenAddress,
           abi: B20_TOKEN_ABI,
           functionName: "mint",
           args: [to, amount]
-        });
+        } as const;
+        const gas = await estimateGasWithBuffer(request);
+        return walletClient.writeContract({ ...request, ...(gas ? { gas } : {}) });
       }),
-    [runWrite, requireReady]
+    [runWrite, requireReady, estimateGasWithBuffer]
   );
 
   /** Burns from your OWN balance — the real B20 token only exposes burn(uint256),
@@ -163,15 +197,17 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
       runWrite(async () => {
         const { walletClient, me, tokenAddress } = requireReady();
         await assertSufficientBalance(me, amount);
-        return walletClient.writeContract({
+        const request = {
           account: me,
           address: tokenAddress,
           abi: B20_TOKEN_ABI,
           functionName: "burn",
           args: [amount]
-        });
+        } as const;
+        const gas = await estimateGasWithBuffer(request);
+        return walletClient.writeContract({ ...request, ...(gas ? { gas } : {}) });
       }),
-    [runWrite, requireReady, assertSufficientBalance]
+    [runWrite, requireReady, assertSufficientBalance, estimateGasWithBuffer]
   );
 
   const transfer = useCallback(
@@ -179,15 +215,17 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
       runWrite(async () => {
         const { walletClient, me, tokenAddress } = requireReady();
         await assertSufficientBalance(me, amount);
-        return walletClient.writeContract({
+        const request = {
           account: me,
           address: tokenAddress,
           abi: B20_TOKEN_ABI,
           functionName: "transfer",
           args: [to, amount]
-        });
+        } as const;
+        const gas = await estimateGasWithBuffer(request);
+        return walletClient.writeContract({ ...request, ...(gas ? { gas } : {}) });
       }),
-    [runWrite, requireReady, assertSufficientBalance]
+    [runWrite, requireReady, assertSufficientBalance, estimateGasWithBuffer]
   );
 
   /** Sends everyone in ONE transaction.
@@ -211,13 +249,15 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
       setTxState("awaiting-signature");
       try {
         if (mode === "mint") {
-          const hash = await walletClient.writeContract({
+          const batchRequest = {
             account: me,
             address: tokenAddress,
             abi: B20_TOKEN_ABI,
             functionName: "batchMint",
             args: [tos, amounts]
-          });
+          } as const;
+          const batchGas = await estimateGasWithBuffer(batchRequest);
+          const hash = await walletClient.writeContract({ ...batchRequest, ...(batchGas ? { gas: batchGas } : {}) });
           setLastTxHash(hash);
           setTxState("confirming");
           await publicClient.waitForTransactionReceipt({ hash });
@@ -232,13 +272,15 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
           })) as bigint;
 
           if (currentAllowance < total) {
-            const approveHash = await walletClient.writeContract({
+            const approveRequest = {
               account: me,
               address: tokenAddress,
               abi: B20_TOKEN_ABI,
               functionName: "approve",
               args: [distributorAddress, total]
-            });
+            } as const;
+            const approveGas = await estimateGasWithBuffer(approveRequest);
+            const approveHash = await walletClient.writeContract({ ...approveRequest, ...(approveGas ? { gas: approveGas } : {}) });
             setLastTxHash(approveHash);
             setTxState("confirming");
             await publicClient.waitForTransactionReceipt({ hash: approveHash });
@@ -264,22 +306,24 @@ export function useTokenManager(tokenAddress: Address | null, chainId: number | 
         throw e;
       }
     },
-    [requireReady, distributorAddress, publicClient, assertSufficientBalance, refresh]
+    [requireReady, distributorAddress, publicClient, assertSufficientBalance, refresh, estimateGasWithBuffer]
   );
 
   const setPaused = useCallback(
     (pause: boolean) =>
       runWrite(async () => {
         const { walletClient, me, tokenAddress } = requireReady();
-        return walletClient.writeContract({
+        const request = {
           account: me,
           address: tokenAddress,
           abi: B20_TOKEN_ABI,
           functionName: pause ? "pause" : "unpause",
           args: []
-        });
+        } as const;
+        const gas = await estimateGasWithBuffer(request);
+        return walletClient.writeContract({ ...request, ...(gas ? { gas } : {}) });
       }),
-    [runWrite, requireReady]
+    [runWrite, requireReady, estimateGasWithBuffer]
   );
 
   const resetTxState = useCallback(() => {
