@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 // Deploys RHFactory once per network (Robinhood Chain mainnet, chain id 4663;
 // testnet, chain id 46630). Requires OpenZeppelin Contracts installed:

@@ -1,5 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
+
+// NOTE for Remix users: OpenZeppelin Contracts 5.1's ERC721Enumerable/Pausable
+// (imported below and in RHNFT.sol/RHToken.sol) use the `mcopy` opcode
+// (EIP-5656), which only exists from the Cancun EVM upgrade onward. If you
+// see "DeclarationError: Function mcopy not found" while compiling, it means
+// Remix's target EVM version is set below Cancun — open the Solidity
+// Compiler tab -> Advanced Configurations -> EVM Version, and set it to
+// "cancun" (or "prague"/"default" if your Remix build defaults there).
+// Robinhood Chain runs Arbitrum's ArbOS 20+ (Cancun opcodes included, live
+// on Arbitrum since March 2024), so this is purely a compiler setting —
+// nothing about the chain itself is the problem.
 
 import {RHToken} from "./RHToken.sol";
 import {RHNFT} from "./RHNFT.sol";
