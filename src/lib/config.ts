@@ -22,6 +22,13 @@ export const BATCH_DISTRIBUTOR_ADDRESSES: Partial<Record<number, Address>> = {
   [baseSepolia.id]: readAddr(import.meta.env.VITE_BATCH_DISTRIBUTOR_ADDRESS_TESTNET, "VITE_BATCH_DISTRIBUTOR_ADDRESS_TESTNET")
 };
 
+// Robinhood Chain — fully separate feature, own factory contract, own env vars.
+// Chain IDs 4663 (mainnet) / 46630 (testnet), see lib/robinhoodChain.ts.
+export const RH_FACTORY_ADDRESSES: Partial<Record<number, Address>> = {
+  4663: readAddr(import.meta.env.VITE_RH_FACTORY_ADDRESS_MAINNET, "VITE_RH_FACTORY_ADDRESS_MAINNET"),
+  46630: readAddr(import.meta.env.VITE_RH_FACTORY_ADDRESS_TESTNET, "VITE_RH_FACTORY_ADDRESS_TESTNET")
+};
+
 export const PINATA_JWT = import.meta.env.VITE_PINATA_JWT as string | undefined;
 export const PINATA_GATEWAY = (import.meta.env.VITE_PINATA_GATEWAY as string | undefined) ?? "https://gateway.pinata.cloud";
 

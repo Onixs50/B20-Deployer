@@ -8,6 +8,7 @@ import { TokenHistory } from "./components/TokenHistory";
 import { TokenManager } from "./components/TokenManager";
 import { Footer } from "./components/Footer";
 import { ForgeEmbers } from "./components/ForgeEmbers";
+import { RobinhoodBadge } from "./components/RobinhoodBadge";
 import type { DeployedToken } from "./lib/history";
 import { useLang } from "./lib/i18n";
 import "./lib/appkit"; // side-effect: initializes Reown AppKit once
@@ -31,6 +32,8 @@ export default function App() {
         <Footer />
         <TokenHistory refreshKey={historyVersion} onManage={(token) => setManaging(token)} />
       </div>
+
+      <RobinhoodBadge />
 
       <AnimatePresence>
         {managing && (

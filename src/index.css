@@ -54,4 +54,7 @@ body {
   .input {
     @apply w-full rounded-lg border border-forge-line bg-forge-bg/70 px-3.5 py-2.5 text-sm text-forge-ink outline-none transition-colors placeholder:text-forge-faint/60 focus:border-forge-blue;
   }
+  .rh-input {
+    @apply w-full rounded-lg border border-rh-line bg-rh-black/70 px-3.5 py-2.5 text-sm text-rh-ink outline-none transition-colors placeholder:text-rh-faint/60 focus:border-rh-yellow;
+  }
 }

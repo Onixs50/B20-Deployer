@@ -2,6 +2,7 @@ import { createAppKit } from "@reown/appkit/react";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { base, baseSepolia } from "@reown/appkit/networks";
 import { REOWN_PROJECT_ID } from "./config";
+import { robinhoodChain, robinhoodChainTestnet } from "./robinhoodChain";
 
 if (!REOWN_PROJECT_ID) {
   // eslint-disable-next-line no-console
@@ -12,11 +13,12 @@ if (!REOWN_PROJECT_ID) {
 
 const projectId = REOWN_PROJECT_ID ?? "MISSING_PROJECT_ID";
 
-// Only Base networks are registered with AppKit. Any wallet connecting from
-// another chain gets prompted by AppKit's own switcher, and our own
-// NetworkGate component blocks all contract calls until the active chain
-// is one of these two.
-export const networks = [base, baseSepolia];
+// Base networks power the main B20 Forge flow; Robinhood Chain networks power
+// the separate /robinhood page. Registering all four here just lets the
+// wallet know about them — each page's own NetworkGate/guard still enforces
+// which chains it actually accepts, so this list growing never changes what
+// the Base flow can do.
+export const networks = [base, baseSepolia, robinhoodChain, robinhoodChainTestnet] as any;
 
 export const wagmiAdapter = new WagmiAdapter({
   projectId,
@@ -25,7 +27,7 @@ export const wagmiAdapter = new WagmiAdapter({
 
 export const appKit = createAppKit({
   adapters: [wagmiAdapter],
-  networks: [base, baseSepolia] as any,
+  networks: [base, baseSepolia, robinhoodChain, robinhoodChainTestnet] as any,
   defaultNetwork: base,
   projectId,
   metadata: {

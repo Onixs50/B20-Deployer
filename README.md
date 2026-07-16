@@ -60,6 +60,33 @@ B20 tokens are precompiles with no on-chain bytecode. Some wallets under-estimat
 
 ---
 
+## Robinhood Chain: token & NFT deployer
+
+A separate page at `/robinhood` (a floating badge on the main site links to it) lets you deploy on [Robinhood Chain](https://robinhood.com/us/en/chain/) — Robinhood's own Arbitrum-Orbit L2, chain ID 4663 on mainnet / 46630 on testnet, gas paid in ETH. It's a fully isolated app: its own theme, its own wallet-network handling, its own local deploy history — nothing here touches the B20/Base flow above.
+
+Unlike Base's B20 standard, Robinhood Chain has no native asset precompile, so there's no "activation registry" step — deploying a token or NFT here deploys a real, ordinary contract:
+
+- **Token (ERC-20)** — name, symbol, decimals, optional supply cap, optional initial mint, owner-gated mint, holder-gated burn, pause/unpause, transferable ownership.
+- **NFT collection (ERC-721)** — name, symbol, metadata URI (either a per-token folder like `ipfs://.../` or one shared metadata file for simple membership-style drops), optional max supply, optional mint price in ETH, owner airdrop minting, ERC-2981 royalties, pause/unpause, ETH withdrawal.
+
+Visiting `/robinhood` with a wallet already connected will try to switch it onto Robinhood Chain automatically; if that's rejected or there's no wallet yet, the in-page network picker handles it the same way the main site's does.
+
+### One-time factory deploy
+
+Because these are real deployed contracts (not a precompile Base already provides), the app calls a small factory contract — `contracts/robinhood/RHFactory.sol` — that deploys a fresh `RHToken` or `RHNFT` and hands you full ownership in the same transaction. Deploy it once per network and set the address in `.env`:
+
+```bash
+forge install OpenZeppelin/openzeppelin-contracts
+forge script contracts/script/DeployRHFactory.s.sol:DeployRHFactory \
+  --rpc-url https://rpc.mainnet.chain.robinhood.com \
+  --chain-id 4663 --private-key $PRIVATE_KEY --broadcast \
+  --verify --verifier blockscout --verifier-url https://robinhoodchain.blockscout.com/api/
+```
+
+Repeat against the testnet (`https://rpc.testnet.chain.robinhood.com`, chain ID `46630`) and put both addresses in `VITE_RH_FACTORY_ADDRESS_MAINNET` / `VITE_RH_FACTORY_ADDRESS_TESTNET`. Until those are set, the Robinhood page's deploy buttons will show a "factory address not configured" error — everything else on the page (browsing, wallet connect, network switch) still works.
+
+> If you deploy this site to static hosting, make sure `/robinhood` falls back to `index.html` the same way the root route does (most SPA hosting presets already rewrite every unmatched path to `index.html` — double check yours does, since this page is a real navigation, not client-side routing).
+
 ## Running it yourself
 
 ```bash

@@ -15,6 +15,17 @@ export default {
           crimson: "#FF4D6D",
           ink: "#E7ECFF",
           faint: "#7C88B8"
+        },
+        rh: {
+          bg: "#0F0F0A",
+          panel: "#1A1A12",
+          line: "#33331F",
+          yellow: "#FFDE59",
+          yellowbright: "#FFEA8A",
+          deep: "#B8860B",
+          ink: "#FFFCF0",
+          faint: "#B8B49A",
+          black: "#0A0A08"
         }
       },
       fontFamily: {
@@ -43,13 +54,27 @@ export default {
         spinslow: {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" }
+        },
+        wobble: {
+          "0%, 100%": { transform: "rotate(0deg)" },
+          "15%": { transform: "rotate(-10deg)" },
+          "30%": { transform: "rotate(8deg)" },
+          "45%": { transform: "rotate(-6deg)" },
+          "60%": { transform: "rotate(4deg)" },
+          "75%": { transform: "rotate(-2deg)" }
+        },
+        pulseglow: {
+          "0%,100%": { boxShadow: "0 0 0px 0px rgba(255,222,89,0.55)" },
+          "50%": { boxShadow: "0 0 22px 6px rgba(255,222,89,0.55)" }
         }
       },
       animation: {
         stampin: "stampin 0.6s cubic-bezier(.2,1,.3,1) forwards",
         float: "float 4s ease-in-out infinite",
         shimmer: "shimmer 2.5s linear infinite",
-        spinslow: "spinslow 6s linear infinite"
+        spinslow: "spinslow 6s linear infinite",
+        wobble: "wobble 2.6s ease-in-out infinite",
+        pulseglow: "pulseglow 2.6s ease-in-out infinite"
       }
     }
   },
