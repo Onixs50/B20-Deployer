@@ -3,9 +3,7 @@ export const RH_TOKEN_ABI = [
   { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
   { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
   { type: "function", name: "totalSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "cap", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "owner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
-  { type: "function", name: "paused", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
   {
     type: "function",
     name: "balanceOf",
@@ -39,25 +37,6 @@ export const RH_TOKEN_ABI = [
       { name: "amount", type: "uint256" }
     ],
     outputs: [{ type: "bool" }]
-  },
-  {
-    type: "function",
-    name: "approve",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" }
-    ],
-    outputs: [{ type: "bool" }]
-  },
-  { type: "function", name: "pause", stateMutability: "nonpayable", inputs: [], outputs: [] },
-  { type: "function", name: "unpause", stateMutability: "nonpayable", inputs: [], outputs: [] },
-  {
-    type: "function",
-    name: "transferOwnership",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "newOwner", type: "address" }],
-    outputs: []
   },
   {
     type: "event",

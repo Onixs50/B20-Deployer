@@ -8,8 +8,6 @@ export interface RHTokenInfo {
   symbol: string;
   decimals: number;
   totalSupply: bigint;
-  cap: bigint | null;
-  paused: boolean | null;
   myBalance: bigint;
   isOwner: boolean;
 }
@@ -39,14 +37,6 @@ export function useRHTokenManager(tokenAddress: Address | null, chainId: number 
         publicClient.readContract({ ...base, functionName: "totalSupply" }) as Promise<bigint>,
         publicClient.readContract({ ...base, functionName: "owner" }) as Promise<Address>
       ]);
-      const cap = await publicClient
-        .readContract({ ...base, functionName: "cap" })
-        .then((v) => v as bigint)
-        .catch(() => null);
-      const paused = await publicClient
-        .readContract({ ...base, functionName: "paused" })
-        .then((v) => v as boolean)
-        .catch(() => null);
       const myBalance = me
         ? ((await publicClient.readContract({ ...base, functionName: "balanceOf", args: [me] })) as bigint)
         : 0n;
@@ -56,8 +46,6 @@ export function useRHTokenManager(tokenAddress: Address | null, chainId: number 
         symbol,
         decimals,
         totalSupply,
-        cap: cap && cap > 0n ? cap : null,
-        paused,
         myBalance,
         isOwner: !!me && owner.toLowerCase() === me.toLowerCase()
       });
@@ -140,35 +128,5 @@ export function useRHTokenManager(tokenAddress: Address | null, chainId: number 
     [runWrite, requireReady]
   );
 
-  const setPaused = useCallback(
-    (pause: boolean) =>
-      runWrite(async () => {
-        const { walletClient, me, tokenAddress } = requireReady();
-        return walletClient.writeContract({
-          account: me,
-          address: tokenAddress,
-          abi: RH_TOKEN_ABI,
-          functionName: pause ? "pause" : "unpause",
-          args: []
-        });
-      }),
-    [runWrite, requireReady]
-  );
-
-  const transferOwnership = useCallback(
-    (newOwner: Address) =>
-      runWrite(async () => {
-        const { walletClient, me, tokenAddress } = requireReady();
-        return walletClient.writeContract({
-          account: me,
-          address: tokenAddress,
-          abi: RH_TOKEN_ABI,
-          functionName: "transferOwnership",
-          args: [newOwner]
-        });
-      }),
-    [runWrite, requireReady]
-  );
-
-  return { info, loadingInfo, refresh, txState, txError, lastTxHash, mint, burn, transfer, setPaused, transferOwnership };
+  return { info, loadingInfo, refresh, txState, txError, lastTxHash, mint, burn, transfer };
 }

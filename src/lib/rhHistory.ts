@@ -1,7 +1,4 @@
-export type RHAssetKind = "token" | "nft";
-
 export interface RHDeployedAsset {
-  kind: RHAssetKind;
   address: string;
   name: string;
   symbol: string;

@@ -22,16 +22,9 @@ const L = {
   decimals: { fa: "اعشار", en: "Decimals" },
   decimalsHint: { fa: "معمولاً ۱۸", en: "usually 18" },
   decimalsErr: { fa: "بین ۶ تا ۱۸.", en: "Must be 6–18." },
-  cap: { fa: "سقف عرضه", en: "Supply cap" },
-  capHintUncapped: { fa: "بدون سقف — همیشه می‌تونی بیشتر mint کنی.", en: "No cap — you can always mint more." },
-  capHintCapped: { fa: "بعد از این سقف دیگه نمی‌شه mint کرد.", en: "No more minting once this cap is hit." },
-  capErr: { fa: "یک عدد معتبر بده.", en: "Enter a valid amount." },
-  capUncappedToggle: { fa: "بدون سقف", en: "Uncapped" },
-  capResult: { fa: "سقف:", en: "Cap:" },
   mint: { fa: "مقدار اولیه (اختیاری)", en: "Initial mint (optional)" },
-  mintHint: { fa: "همون لحظه به کیف‌پولت mint می‌شه.", en: "Minted straight to your wallet at creation." },
+  mintHint: { fa: "همون لحظه به کیف‌پولت mint می‌شه. بعداً هم هر وقت خواستی می‌تونی mint کنی.", en: "Minted straight to your wallet at creation. You can mint more anytime after too." },
   mintErr: { fa: "یک عدد معتبر بده.", en: "Enter a valid amount." },
-  mintOverCap: { fa: "از سقف عرضه بیشتره.", en: "Exceeds the supply cap." },
   mintResult: { fa: "mint اولیه:", en: "Initial mint:" },
   submit: { fa: "دیپلوی توکن روی", en: "Deploy token on" },
   needWallet: { fa: "برای دیپلوی، اول کیف‌پولت رو وصل کن.", en: "Connect your wallet to deploy." },
@@ -49,7 +42,7 @@ const L = {
   toastOk: { fa: "تراکنش با موفقیت تایید شد.", en: "Transaction confirmed." }
 };
 
-const emptyForm = { name: "", symbol: "", decimals: 18, cap: "", noCap: true, initialMint: "" };
+const emptyForm = { name: "", symbol: "", decimals: 18, initialMint: "" };
 
 export function RHTokenForm({ onDeployed }: { onDeployed?: () => void }) {
   const { lang } = useLang();
@@ -58,7 +51,7 @@ export function RHTokenForm({ onDeployed }: { onDeployed?: () => void }) {
   const { onRobinhoodChain } = useRHNetworkGuard();
 
   const [form, setForm] = useState(emptyForm);
-  const { name, symbol, decimals, cap, noCap, initialMint } = form;
+  const { name, symbol, decimals, initialMint } = form;
 
   const activeChainId = network === "mainnet" ? robinhoodChain.id : robinhoodChainTestnet.id;
   const { launch, reset, stage, error, tokenAddress, txHash, factoryAddress } = useLaunchRHToken(activeChainId);
@@ -66,7 +59,6 @@ export function RHTokenForm({ onDeployed }: { onDeployed?: () => void }) {
   useEffect(() => {
     if (stage === "done" && tokenAddress && address) {
       addDeployedRHAsset({
-        kind: "token",
         address: tokenAddress,
         name: name.trim(),
         symbol: symbol.trim().toUpperCase(),
@@ -85,13 +77,9 @@ export function RHTokenForm({ onDeployed }: { onDeployed?: () => void }) {
     if (name.trim().length < 1 || name.trim().length > 40) e.name = L.nameErr[lang];
     if (!/^[A-Za-z0-9]{2,11}$/.test(symbol.trim())) e.symbol = L.symbolErr[lang];
     if (decimals < 6 || decimals > 18) e.decimals = L.decimalsErr[lang];
-    if (!noCap && !isValidQuantityInput(cap, decimals)) e.cap = L.capErr[lang];
     if (initialMint.trim() !== "" && !isValidQuantityInput(initialMint, decimals)) e.initialMint = L.mintErr[lang];
-    if (!noCap && initialMint.trim() !== "" && isValidQuantityInput(cap, decimals) && isValidQuantityInput(initialMint, decimals)) {
-      if (toBaseUnits(initialMint, decimals) > toBaseUnits(cap, decimals)) e.initialMint = L.mintOverCap[lang];
-    }
     return e;
-  }, [name, symbol, decimals, cap, noCap, initialMint, lang]);
+  }, [name, symbol, decimals, initialMint, lang]);
 
   const formValid = Object.keys(errors).length === 0 && name && symbol;
   const canSubmit = formValid && isConnected && onRobinhoodChain && stage !== "confirming" && stage !== "awaiting-signature";
@@ -110,11 +98,10 @@ export function RHTokenForm({ onDeployed }: { onDeployed?: () => void }) {
     if (!onRobinhoodChain) return toast.error(L.needNetwork[lang]);
     if (!factoryAddress) return toast.error(lang === "fa" ? "آدرس RHFactory تنظیم نشده." : "RHFactory address is not configured.");
 
-    const capUnits = noCap ? 2n ** 128n - 1n : toBaseUnits(cap, decimals);
     const mintUnits = initialMint.trim() === "" ? 0n : toBaseUnits(initialMint, decimals);
 
     try {
-      await launch({ name: name.trim(), symbol: symbol.trim().toUpperCase(), decimals, capBaseUnits: capUnits, initialMintBaseUnits: mintUnits });
+      await launch({ name: name.trim(), symbol: symbol.trim().toUpperCase(), decimals, initialMintBaseUnits: mintUnits });
       toast.success(L.toastOk[lang]);
     } catch {
       // surfaced via `error` state
@@ -169,33 +156,6 @@ export function RHTokenForm({ onDeployed }: { onDeployed?: () => void }) {
                   />
                 </Field>
               </div>
-
-              <Field
-                label={L.cap[lang]}
-                error={errors.cap}
-                hint={noCap ? L.capHintUncapped[lang] : L.capHintCapped[lang]}
-                action={
-                  <label className="flex cursor-pointer items-center gap-1.5 text-xs text-rh-faint">
-                    <input type="checkbox" checked={noCap} onChange={(e) => set("noCap", e.target.checked)} />
-                    {L.capUncappedToggle[lang]}
-                  </label>
-                }
-              >
-                <input
-                  value={noCap ? "" : cap}
-                  onChange={(e) => set("cap", e.target.value.replace(/[^\d.]/g, ""))}
-                  disabled={noCap}
-                  placeholder={noCap ? "∞" : "1000000"}
-                  className="rh-input tabular disabled:opacity-40"
-                  dir="ltr"
-                  inputMode="decimal"
-                />
-                {cap && !noCap && isValidQuantityInput(cap, decimals) && (
-                  <p className="mt-1 text-xs text-rh-faint">
-                    {L.capResult[lang]} <span className="text-rh-ink">{formatDisplay(cap)}</span>
-                  </p>
-                )}
-              </Field>
 
               <Field label={L.mint[lang]} error={errors.initialMint} hint={L.mintHint[lang]}>
                 <input

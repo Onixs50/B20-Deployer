@@ -8,7 +8,6 @@ export interface RHLaunchTokenParams {
   name: string;
   symbol: string;
   decimals: number;
-  capBaseUnits: bigint;
   initialMintBaseUnits: bigint;
 }
 
@@ -51,7 +50,7 @@ export function useLaunchRHToken(chainId: number | undefined) {
           address: factoryAddress,
           abi: RH_FACTORY_ABI,
           functionName: "createToken",
-          args: [params.name, params.symbol, params.decimals, params.capBaseUnits, params.initialMintBaseUnits]
+          args: [params.name, params.symbol, params.decimals, params.initialMintBaseUnits]
         });
         setTxHash(hash);
 

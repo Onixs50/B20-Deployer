@@ -60,20 +60,17 @@ B20 tokens are precompiles with no on-chain bytecode. Some wallets under-estimat
 
 ---
 
-## Robinhood Chain: token & NFT deployer
+## Robinhood Chain: token deployer
 
 A separate page at `/robinhood` (a floating badge on the main site links to it) lets you deploy on [Robinhood Chain](https://robinhood.com/us/en/chain/) — Robinhood's own Arbitrum-Orbit L2, chain ID 4663 on mainnet / 46630 on testnet, gas paid in ETH. It's a fully isolated app: its own theme, its own wallet-network handling, its own local deploy history — nothing here touches the B20/Base flow above.
 
-Unlike Base's B20 standard, Robinhood Chain has no native asset precompile, so there's no "activation registry" step — deploying a token or NFT here deploys a real, ordinary contract:
-
-- **Token (ERC-20)** — name, symbol, decimals, optional supply cap, optional initial mint, owner-gated mint, holder-gated burn, pause/unpause, transferable ownership.
-- **NFT collection (ERC-721)** — name, symbol, metadata URI (either a per-token folder like `ipfs://.../` or one shared metadata file for simple membership-style drops), optional max supply, optional mint price in ETH, owner airdrop minting, ERC-2981 royalties, pause/unpause, ETH withdrawal.
+Unlike Base's B20 standard, Robinhood Chain has no native asset precompile, so there's no "activation registry" step — deploying a token here deploys a real, ordinary ERC-20 contract: name, symbol, decimals, optional initial mint, owner-gated mint, holder-gated burn. Nothing else — no cap, no pause, no NFTs — by design, to keep the contract (and the Remix compile) as simple as possible.
 
 Visiting `/robinhood` with a wallet already connected will try to switch it onto Robinhood Chain automatically; if that's rejected or there's no wallet yet, the in-page network picker handles it the same way the main site's does.
 
 ### One-time factory deploy
 
-Because these are real deployed contracts (not a precompile Base already provides), the app calls a small factory contract — `contracts/robinhood/RHFactory.sol` — that deploys a fresh `RHToken` or `RHNFT` and hands you full ownership in the same transaction. Deploy it once per network and set the address in `.env`:
+Because this is a real deployed contract (not a precompile Base already provides), the app calls a small factory contract — `contracts/robinhood/RHFactory.sol` — that deploys a fresh `RHToken` and hands you full ownership in the same transaction. Deploy it once per network and set the address in `.env`:
 
 ```bash
 forge install OpenZeppelin/openzeppelin-contracts
@@ -83,13 +80,11 @@ forge script contracts/script/DeployRHFactory.s.sol:DeployRHFactory \
   --verify --verifier blockscout --verifier-url https://robinhoodchain.blockscout.com/api/
 ```
 
-Repeat against the testnet (`https://rpc.testnet.chain.robinhood.com`, chain ID `46630`) and put both addresses in `VITE_RH_FACTORY_ADDRESS_MAINNET` / `VITE_RH_FACTORY_ADDRESS_TESTNET`. Until those are set, the Robinhood page's deploy buttons will show a "factory address not configured" error — everything else on the page (browsing, wallet connect, network switch) still works.
+Repeat against the testnet (`https://rpc.testnet.chain.robinhood.com`, chain ID `46630`) and put both addresses in `VITE_RH_FACTORY_ADDRESS_MAINNET` / `VITE_RH_FACTORY_ADDRESS_TESTNET`. Until those are set, the Robinhood page's deploy button will show a "factory address not configured" error — everything else on the page (browsing, wallet connect, network switch) still works.
 
 > If you deploy this site to static hosting, make sure `/robinhood` falls back to `index.html` the same way the root route does (most SPA hosting presets already rewrite every unmatched path to `index.html` — double check yours does, since this page is a real navigation, not client-side routing).
 
-> **Compiling in Remix and seeing `DeclarationError: Function "mcopy" not found`?** OpenZeppelin Contracts 5.1's `ERC721Pausable` (used by `RHNFT.sol`) relies on the `mcopy` opcode (EIP-5656), which only exists from the Cancun EVM upgrade onward. This error means Remix's compiler is targeting an EVM version older than Cancun — open the **Solidity Compiler** tab → **Advanced Configurations** → **EVM Version**, and set it to `cancun` (or `prague`, or `default` if your Remix build already defaults there). Robinhood Chain runs on Arbitrum's ArbOS 20+, which has included Cancun opcodes (including `mcopy`) since March 2024, so this is purely a local compiler setting — the chain itself supports it fine.
-
-> **Compiling `RHNFT.sol` and seeing `CompilerError: Stack too deep`?** `RHNFT.sol` intentionally skips `ERC721Enumerable` to stay clear of this, so a plain compile should work as-is. If you've customized it and hit this again, the fastest fix is still enabling **Advanced Configurations → Enable optimization** and turning on **Via IR** in Remix's Solidity Compiler tab, rather than trimming features.
+> **Compiling in Remix and seeing `DeclarationError: Function "mcopy" not found`?** OpenZeppelin Contracts 5.1's internals rely on the `mcopy` opcode (EIP-5656), which only exists from the Cancun EVM upgrade onward. This error means Remix's compiler is targeting an EVM version older than Cancun — open the **Solidity Compiler** tab → **Advanced Configurations** → **EVM Version**, and set it to `cancun` (or `prague`, or `default` if your Remix build already defaults there). Robinhood Chain runs on Arbitrum's ArbOS 20+, which has included Cancun opcodes (including `mcopy`) since March 2024, so this is purely a local compiler setting — the chain itself supports it fine.
 
 ## Running it yourself
 

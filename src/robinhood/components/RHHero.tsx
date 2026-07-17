@@ -6,11 +6,11 @@ const L = {
     fa: "شبکه Robinhood Chain — زنده از ۱ ژوئیه ۲۰۲۶",
     en: "Robinhood Chain — live since July 1, 2026"
   },
-  titlePrefix: { fa: "توکن یا NFT بساز روی", en: "Launch a token or NFT on" },
+  titlePrefix: { fa: "توکن بساز روی", en: "Launch a token on" },
   titleBrand: { fa: "Robinhood Chain", en: "Robinhood Chain" },
   desc: {
-    fa: "بر خلاف B20 روی Base، اینجا استاندارد پیش‌کامپایل‌شده‌ای وجود نداره — پس این بخش برات یک قرارداد ERC-20 یا ERC-721 واقعی دیپلوی می‌کنه، مالکیتش کامل مال کیف‌پول توئه، همون لحظه.",
-    en: "Unlike B20 on Base, there's no native asset precompile here — so this deploys a real ERC-20 or ERC-721 contract, fully owned by your wallet the moment it lands."
+    fa: "بر خلاف B20 روی Base، اینجا استاندارد پیش‌کامپایل‌شده‌ای وجود نداره — پس این بخش برات یک قرارداد ERC-20 واقعی با mint و burn دیپلوی می‌کنه، مالکیتش کامل مال کیف‌پول توئه، همون لحظه.",
+    en: "Unlike B20 on Base, there's no native asset precompile here — so this deploys a real ERC-20 contract with mint and burn, fully owned by your wallet the moment it lands."
   }
 };
 

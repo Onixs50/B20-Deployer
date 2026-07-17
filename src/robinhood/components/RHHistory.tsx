@@ -5,8 +5,7 @@ import { RH_CHAIN_META } from "../../lib/robinhoodChain";
 import { useLang } from "../../lib/i18n";
 
 const L = {
-  title: { fa: "توکن‌ها و NFTهای من روی Robinhood Chain", en: "My Robinhood Chain tokens & NFTs" },
-  empty: { fa: "هنوز چیزی دیپلوی نکردی.", en: "You haven't deployed anything yet." },
+  title: { fa: "توکن‌های من روی Robinhood Chain", en: "My Robinhood Chain tokens" },
   manage: { fa: "مدیریت", en: "Manage" },
   note: { fa: "این لیست فقط توی همین مرورگر ذخیره می‌شه.", en: "This list is stored locally in this browser only." }
 };
@@ -46,9 +45,7 @@ export function RHHistory({
                 className="flex flex-1 items-center justify-between gap-2 overflow-hidden"
               >
                 <span className="flex items-center gap-1.5 truncate">
-                  <span className="rounded-full bg-rh-yellow/15 px-1.5 py-0.5 text-[10px] font-semibold text-rh-yellow">
-                    {asset.kind === "token" ? "ERC-20" : "ERC-721"}
-                  </span>
+                  <span className="rounded-full bg-rh-yellow/15 px-1.5 py-0.5 text-[10px] font-semibold text-rh-yellow">ERC-20</span>
                   <span className="truncate font-medium text-rh-ink">{asset.name}</span>
                   <span className="tabular text-rh-faint">({asset.symbol})</span>
                 </span>
