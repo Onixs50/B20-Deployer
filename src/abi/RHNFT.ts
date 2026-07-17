@@ -7,7 +7,6 @@ export const RH_NFT_ABI = [
   { type: "function", name: "folderMode", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
   { type: "function", name: "mintPriceWei", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "totalMinted", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "totalSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   {
     type: "function",
     name: "balanceOf",

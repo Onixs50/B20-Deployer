@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import {ERC721Pausable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
 import {ERC721Burnable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
@@ -14,7 +13,13 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 /// optional supply cap, optional marketplace royalty (ERC-2981). Deployed for
 /// you by RHFactory, one contract per collection, real bytecode (no precompile
 /// shortcuts exist for NFTs on Robinhood Chain).
-contract RHNFT is ERC721, ERC721Enumerable, ERC721Pausable, ERC721Burnable, ERC2981, Ownable {
+///
+/// Deliberately skips ERC721Enumerable: on-chain enumeration isn't needed for
+/// wallets or marketplaces (they all index via Transfer events), and folding
+/// it into this inheritance chain is what was pushing Remix's compiler past
+/// "stack too deep" without --via-ir. `totalMinted()` below covers the one
+/// thing people actually use enumeration for on a fresh collection.
+contract RHNFT is ERC721, ERC721Pausable, ERC721Burnable, ERC2981, Ownable {
     using Strings for uint256;
 
     /// @notice 0 means uncapped.
@@ -117,7 +122,7 @@ contract RHNFT is ERC721, ERC721Enumerable, ERC721Pausable, ERC721Burnable, ERC2
         return _baseTokenURI;
     }
 
-    function tokenURI(uint256 tokenId) public view override(ERC721) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireOwned(tokenId);
         string memory base = _baseURI();
         if (bytes(base).length == 0) return "";
@@ -127,24 +132,15 @@ contract RHNFT is ERC721, ERC721Enumerable, ERC721Pausable, ERC721Burnable, ERC2
 
     // --- required overrides (multiple-inheritance glue, OZ v5 style) ---
 
-    function _update(
-        address to,
-        uint256 tokenId,
-        address auth
-    ) internal override(ERC721, ERC721Enumerable, ERC721Pausable) returns (address) {
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        override(ERC721, ERC721Pausable)
+        returns (address)
+    {
         return super._update(to, tokenId, auth);
     }
 
-    function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
-        super._increaseBalance(account, value);
-    }
-
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721Enumerable, ERC2981)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC2981) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

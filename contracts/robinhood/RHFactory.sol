@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// NOTE for Remix users: OpenZeppelin Contracts 5.1's ERC721Enumerable/Pausable
+// NOTE for Remix users: OpenZeppelin Contracts 5.1's ERC721Pausable
 // (imported below and in RHNFT.sol/RHToken.sol) use the `mcopy` opcode
 // (EIP-5656), which only exists from the Cancun EVM upgrade onward. If you
 // see "DeclarationError: Function mcopy not found" while compiling, it means
